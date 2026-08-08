@@ -18,26 +18,23 @@ jobs:
           node-version: '18.x'
 
       - name: Install Dependencies
-        run: |
-          npm install
-          npm ci  # Install exact dependencies from package-lock.json
+        run: npm ci
 
       - name: Build Extension
-        run: |
-          npm run build  # Adjust this script to generate the .crx file (using vite-plugin-crxjs)
-          # Example: vite build --config vite.config.ts --out-dir dist/
+        run: npm run build
+
+      - name: Zip Build Artifacts
+        run: zip -r release.zip dist/*
 
       - name: Create GitHub Release
         id: release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
           body: |
-            Auto-generated release for version ${{ github.ref }}
-          assets:
-            - dist/*.crx
+            Auto-generated release for version ${{ github.ref_name }}
+          files: release.zip
 
       - name: Clean Up
-        run: |
-          rm -rf dist
+        run: rm -rf dist release.zip
