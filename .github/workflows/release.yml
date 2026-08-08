@@ -34,7 +34,8 @@ jobs:
           name: Release ${{ github.ref_name }}
           body: |
             Auto-generated release for version ${{ github.ref_name }}
-          files: release.zip
+          assets:
+            - release.zip
 
       - name: Clean Up
         run: rm -rf dist release.zip
