@@ -7,11 +7,18 @@ export async function getEnabledAdapters(platforms: string[]): Promise<BaseAdapt
   const enabledAdapters: BaseAdapter[] = [];
 
   for (const platform of platforms) {
-    const importFn = adapters[platform];
+    // Construct the expected import path (e.g., './youtubeAdapter.ts')
+    const importPath = `./${platform}Adapter.ts`;
+    const importFn = adapters[importPath];
+    
     if (importFn) {
-      const module = await importFn();
-      if (module && module.default) {
-        enabledAdapters.push(await module.default());
+      try {
+        const module = await importFn();
+        if (module && module.default) {
+          enabledAdapters.push(await new module.default());
+        }
+      } catch (error) {
+        console.warn(`Failed to load adapter for platform ${platform}:`, error);
       }
     }
   }
@@ -21,5 +28,10 @@ export async function getEnabledAdapters(platforms: string[]): Promise<BaseAdapt
 
 // Helper for tests to list available adapters
 export function getAvailableAdapterNames(): string[] {
-  return Object.keys(adapters);
+  return Object.keys(adapters)
+    .map(path => {
+      const match = path.match(/^\.\/([a-zA-Z]+)Adapter\.ts$/);
+      return match ? match[1] : null;
+    })
+    .filter((name): name is string => name !== null);
 }

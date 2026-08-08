@@ -1,0 +1,43 @@
+name: Build and Release Extension
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Trigger on semantic version tags
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set Up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.x'
+
+      - name: Install Dependencies
+        run: |
+          npm install
+          npm ci  # Install exact dependencies from package-lock.json
+
+      - name: Build Extension
+        run: |
+          npm run build  # Adjust this script to generate the .crx file (using vite-plugin-crxjs)
+          # Example: vite build --config vite.config.ts --out-dir dist/
+
+      - name: Create GitHub Release
+        id: release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          body: |
+            Auto-generated release for version ${{ github.ref }}
+          assets:
+            - dist/*.crx
+
+      - name: Clean Up
+        run: |
+          rm -rf dist
