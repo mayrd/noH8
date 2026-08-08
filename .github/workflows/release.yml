@@ -24,7 +24,7 @@ jobs:
         run: npm run build
 
       - name: Zip Build Artifacts
-        run: zip -r release.zip dist/*
+        run: zip -r release.zip dist/
 
       - name: Create GitHub Release
         id: release
