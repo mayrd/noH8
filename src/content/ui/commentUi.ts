@@ -1,8 +1,12 @@
 import type { CommentAnalysis, CommentData } from '../../shared/types';
+import {
+  buildReportUrl,
+  reportActionLabel,
+} from './reportHelper';
 
 /**
- * Per-comment UI — a rainbow "analyze" button behind each comment and a small
- * modal that explains how the comment was scored before opening Instagram's
+  * Per-comment UI — a rainbow "analyze" button behind each comment and a small
+ * modal that explains how the comment was scored before opening the platform's
  * report flow.
  *
  * Uses the same lightweight structural-DOM approach as the platform adapters:
@@ -46,15 +50,16 @@ export interface ModalOptions {
 }
 
 /**
- * Destination for the modal's "Report on Instagram" action.
+ * Destination for the modal's "Report on <Platform>" action.
  *
- * NOTE: Instagram does not expose a stable public deep-link that pre-fills the
- * comment-report form, so we point the user at Instagram's report gate. When a
- * stable report URL becomes available this function is the single place to
- * update it.
+ * Delegates to the per-platform `buildReportUrl` helper in `reportHelper.ts`.
+ * Retained for backwards compatibility with callers/tests that resolve a report
+ * URL from a comment.
  */
-export function buildCommentReportUrl(_comment: Pick<CommentData, 'id'>): string {
-  return 'https://www.instagram.com/report/';
+export function buildCommentReportUrl(
+  comment: Pick<CommentData, 'id' | 'platform'>
+): string {
+  return buildReportUrl(comment.platform, comment);
 }
 
 const RAINBOW_GRADIENT = [
@@ -230,9 +235,9 @@ export function openAnalysisModal(options: ModalOptions): UiElement {
     append(card, none);
   }
 
-  // Report action — opens Instagram's report flow in a new tab.
+  // Report action — opens the platform's report flow in a new tab.
   const reportBtn = doc.createElement('button');
-  reportBtn.textContent = 'Report on Instagram';
+  reportBtn.textContent = reportActionLabel(comment.platform);
   reportBtn.setAttribute?.('type', 'button');
   if (reportBtn.dataset) reportBtn.dataset['noh8Report'] = 'true';
   styles(reportBtn, {
@@ -249,14 +254,15 @@ export function openAnalysisModal(options: ModalOptions): UiElement {
     background: 'linear-gradient(90deg, #f4287d, #9b59b6)',
   });
   reportBtn.addEventListener?.('click', () => {
-    windowRef?.open(buildCommentReportUrl(comment), '_blank');
+    windowRef?.open(buildReportUrl(comment.platform, comment), '_blank');
   });
   append(card, reportBtn);
 
   // Privacy note
   const note = doc.createElement('div');
-  note.textContent =
-    'This analysis ran 100% locally in your browser. For context on the sensitive words involved, tap Report on Instagram.';
+  note.textContent = `This analysis ran 100% locally in your browser. For context on the sensitive words involved, tap ${reportActionLabel(
+    comment.platform
+  ).toLowerCase()}.`;
   styles(note, { color: '#888', fontSize: '12px', marginTop: '10px' });
   append(card, note);
 

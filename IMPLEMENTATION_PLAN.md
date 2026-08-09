@@ -125,15 +125,15 @@ Currently `youtubeAdapter.ts`, `facebookAdapter.ts`, `tiktokAdapter.ts` are stub
 - [ ] Ensure `getEnabledAdapters()` loads the three new adapters (test via `registry.test.ts`).
 - [ ] Confirm content-script boot log reports all enabled platforms.
 
-### T2 — Fallback selector mechanism *(robustness)*
+### T2 — Fallback selector mechanism *(robustness) ✅ DONE
 
 Instagram already notes that social DOMs are obfuscated and change often. Make that
 graceful for all adapters.
 
-- [ ] Add a fallback-try chain: try the primary structural selector set, then documented secondary selectors, then return zero comments (never throw).
-- [ ] Log a one-time `console.warn` when a primary selector yields nothing so regressions are visible, but keep scanning.
-- [ ] Add a shared helper (e.g. `content/adapters/selectorStrategy.ts`) reused by every adapter.
-- [ ] Acceptance: unit test that a mocked DOM matching only secondary selectors still extracts comments; and that an unmatched DOM returns `[]` without throwing.
+- [x] Add a fallback-try chain: try the primary structural selector set, then documented secondary selectors, then return zero comments (never throw).
+- [x] Log a one-time `console.warn` when a primary selector yields nothing so regressions are visible, but keep scanning.
+- [x] Add a shared helper (e.g. `content/adapters/selectorStrategy.ts`) reused by every adapter.
+- [x] Acceptance: unit test that a mocked DOM matching only secondary selectors still extracts comments; and that an unmatched DOM returns `[]` without throwing (`selectorStrategy.test.ts` — 9 tests).
 ### T3 — Sidepanel dashboard *(not started — README overclaims this)*
 
 There is currently **no sidepanel folder, no `chrome.sidePanel` usage, and no
@@ -148,16 +148,16 @@ as a shipped feature. Build it properly.
 - [ ] **Quick Jump:** each card's button sends a message to the content script which scrolls to the flagged comment's element and highlights it briefly.
 - [ ] Acceptance: unit tests for the flag store (add/clear, tab scoping, no duplicates) and any pure UI logic; MANUAL browser check on a real comments page.
 
-### T4 — Report Assistant & per-platform reporting
+### T4 — Report Assistant & per-platform reporting ✅ DONE
 
-The modal's report action is currently **hardcoded to Instagram** —
-`buildCommentReportUrl()` returns `https://www.instagram.com/report/` and the button
-says "Report on Instagram" no matter which platform the user is on.
+The modal's report action was hardcoded to Instagram — `buildCommentReportUrl()`
+returned `https://www.instagram.com/report/` and the button always said "Report on Instagram"
+regardless of platform. Now fully per-platform via `src/content/ui/reportHelper.ts`.
 
-- [ ] Make report guidance **per-platform**: add `buildReportUrl(platform, comment)` covering YouTube, Instagram, Facebook, TikTok (use stable help/report gates where deep-links are unavailable, and document that choice like the current Instagram NOTE does).
-- [ ] Button label derives from the comment's `platform` (e.g. "Report on YouTube").
-- [ ] Add a per-platform reporting helper with unit tests over each URL mapping.
-- [ ] Pass `comment.platform` through the content-script → `renderCommentControls` flow (already available on `CommentData`).
+- [x] Make report guidance **per-platform**: add `buildReportUrl(platform, comment)` covering YouTube, Instagram, Facebook, TikTok (use stable help/report gates where deep-links are unavailable, documented in `reportHelper.ts`).
+- [x] Button label derives from the comment platform (e.g. Report on YouTube).
+- [x] Add a per-platform reporting helper with unit tests over each URL mapping (`reportHelper.test.ts` — 6 tests).
+- [x] Pass `comment.platform` through the content-script → `renderCommentControls` flow (already available on `CommentData`) — `commentUi.ts` now calls `reportActionLabel(comment.platform)` and `buildReportUrl(comment.platform, comment)`.
 
 ### T5 — Align inline-warning UX with adapters *(consistency)*
 

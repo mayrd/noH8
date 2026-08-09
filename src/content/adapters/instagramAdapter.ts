@@ -1,6 +1,10 @@
 import { BaseAdapter } from './baseAdapter';
 import type { CommentData, AnalysisResult } from '../../shared/types';
 import { getMatchesForPlatform } from '../platformConfig';
+import {
+  selectCommentContainers,
+  type CommentSelectors,
+} from './selectorStrategy';
 
 /**
  * Structural DOM interfaces. These keep the adapter decoupled from the real
@@ -45,12 +49,10 @@ const SIG_ROLE_CONTENTINFO = 'li[role="contentinfo"][dir]';
 const SIG_FEED_LIST_ITEM = 'div[role="article"] ul li[dir]';
 const SIG_MODAL_LIST_ITEM = 'div[role="dialog"] ul[role="list"] > li';
 
-/** Selector used to locate individual comment containers. */
-const COMMENT_ITEM_SELECTOR = [
-  SIG_ROLE_CONTENTINFO,
-  SIG_FEED_LIST_ITEM,
-  SIG_MODAL_LIST_ITEM,
-].join(', ');
+/** Primary selectors tried first when locating comment containers. */
+const COMMENT_PRIMARY_SELECTORS = [SIG_ROLE_CONTENTINFO];
+/** Fallback selectors tried (only) when the primary selectors yield nothing. */
+const COMMENT_SECONDARY_SELECTORS = [SIG_FEED_LIST_ITEM, SIG_MODAL_LIST_ITEM];
 
 /** Selector used to grab the author handle from a comment container. */
 const AUTHOR_SELECTOR =
@@ -64,7 +66,10 @@ interface InstagramAdapterOptions {
 
 export default class InstagramAdapter extends BaseAdapter {
   /** Selectors exposed for reuse/customisation and used by the unit tests. */
-  static readonly commentItemSelector = COMMENT_ITEM_SELECTOR;
+  static readonly selectors: CommentSelectors = {
+    primary: COMMENT_PRIMARY_SELECTORS,
+    secondary: COMMENT_SECONDARY_SELECTORS,
+  };
   static readonly commentTextSelector = 'span[dir="auto"]';
   static readonly authorSelector = AUTHOR_SELECTOR;
 
@@ -138,7 +143,7 @@ export default class InstagramAdapter extends BaseAdapter {
   extractComments(): CommentData[] {
     if (!this.root) return [];
 
-    const items = this.queryAll(this.root, COMMENT_ITEM_SELECTOR);
+    const items = selectCommentContainers(this.root, InstagramAdapter.selectors);
     const comments: CommentData[] = [];
     for (const item of items) {
       const comment = this.parseComment(item);

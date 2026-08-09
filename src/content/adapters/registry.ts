@@ -33,5 +33,5 @@ export function getAvailableAdapterNames(): string[] {
       const match = path.match(/^\.\/([a-zA-Z]+)Adapter\.ts$/);
       return match ? match[1] : null;
     })
-    .filter((name): name is string => name !== null);
+    .filter((name): name is string => name !== null && name !== 'base');
 }
