@@ -1,8 +1,12 @@
 import { BaseAdapter } from './baseAdapter';
 import type { CommentData } from '../../shared/types';
+import { getMatchesForPlatform } from '../platformConfig';
 
 export default class YouTubeAdapter extends BaseAdapter {
   platformName = 'youtube' as const;
+
+  /** Domains/pages this adapter parses when opened in the browser. */
+  hostPermissions: string[] = getMatchesForPlatform(this.platformName);
 
   extractComments(): CommentData[] {
     // In a real implementation, this would parse the DOM for YouTube comments

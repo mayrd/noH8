@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import type { SettingsState } from './types';
+import type { SettingsState, Platform } from './types';
+import { requestPlatformPermission } from '../permissions/permissions';
 
 // Default platform enablements
 const DEFAULT_PLATFORM_STATE: SettingsState['enabledPlatforms'] = {
@@ -24,6 +25,10 @@ const createSettingsStore = () => {
           state.enabledPlatforms[platform] = enabled;
           return {};
         });
+        // When enabling a platform, ask the user to allow parsing its pages.
+        if (enabled) {
+          void requestPlatformPermission(platform as Platform);
+        }
         // Persist to chrome.storage
         const { enabledPlatforms } = get();
         if (typeof chrome !== 'undefined' && chrome.storage) {

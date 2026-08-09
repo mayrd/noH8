@@ -17,7 +17,26 @@
     "scripting"
   ],
   "host_permissions": [
-    "<all_urls>"
+    "https://www.youtube.com/*",
+    "https://m.youtube.com/*",
+    "https://www.instagram.com/*",
+    "https://m.instagram.com/*",
+    "https://instagram.com/*",
+    "https://www.facebook.com/*",
+    "https://m.facebook.com/*",
+    "https://www.tiktok.com/*",
+    "https://m.tiktok.com/*"
+  ],
+  "optional_host_permissions": [
+    "https://www.youtube.com/*",
+    "https://m.youtube.com/*",
+    "https://www.instagram.com/*",
+    "https://m.instagram.com/*",
+    "https://instagram.com/*",
+    "https://www.facebook.com/*",
+    "https://m.facebook.com/*",
+    "https://www.tiktok.com/*",
+    "https://m.tiktok.com/*"
   ],
   "background": {
     "service_worker": "src/background/serviceWorker.js"
@@ -25,7 +44,15 @@
   "content_scripts": [
     {
       "matches": [
-        "<all_urls>"
+        "https://www.youtube.com/*",
+        "https://m.youtube.com/*",
+        "https://www.instagram.com/*",
+        "https://m.instagram.com/*",
+        "https://instagram.com/*",
+        "https://www.facebook.com/*",
+        "https://m.facebook.com/*",
+        "https://www.tiktok.com/*",
+        "https://m.tiktok.com/*"
       ],
       "js": [
         "src/content/index.ts"

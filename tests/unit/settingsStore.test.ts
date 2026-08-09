@@ -10,7 +10,11 @@ const chromeStorageMock = {
   }
 };
 
-global.chrome = { storage: chromeStorageMock } as any;
+const chromePermissionsMock = {
+  request: vi.fn().mockResolvedValue(true)
+};
+
+global.chrome = { storage: chromeStorageMock, permissions: chromePermissionsMock } as any;
 
 import { settingsStore } from '../../src/settings/settingsStore';
 
@@ -47,5 +51,23 @@ describe('SettingsStore', () => {
       facebook: true,
       tiktok: true
     });
+  });
+
+  test('enabling a platform requests permission to parse its pages', () => {
+    const state = settingsStore.getState();
+    state.setEnabledPlatform('instagram', true);
+    expect(chromePermissionsMock.request).toHaveBeenCalledWith({
+      origins: [
+        'https://www.instagram.com/*',
+        'https://m.instagram.com/*',
+        'https://instagram.com/*'
+      ]
+    });
+  });
+
+  test('disabling a platform does not request additional permissions', () => {
+    const state = settingsStore.getState();
+    state.setEnabledPlatform('instagram', false);
+    expect(chromePermissionsMock.request).not.toHaveBeenCalled();
   });
 });

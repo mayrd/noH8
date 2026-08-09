@@ -1,6 +1,12 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { defineManifest, crx } from '@crxjs/vite-plugin';
+import { getAllMatches } from './src/content/platformConfig';
+
+// Host match patterns for the pages the extension should parse. Scoping the
+// manifest to these origins prompts the user to allow parsing these sites and
+// prevents the extension from touching unrelated pages.
+const PLATFORM_MATCHES = getAllMatches();
 
 // Read manifest
 const manifest = defineManifest({
@@ -18,12 +24,13 @@ const manifest = defineManifest({
     }
   },
   permissions: ["storage", "scripting"],
-  host_permissions: ["<all_urls>"],
+  host_permissions: PLATFORM_MATCHES,
+  optional_host_permissions: PLATFORM_MATCHES,
   background: {
     service_worker: "src/background/serviceWorker.js"
   },
   content_scripts: [{
-    matches: ["<all_urls>"],
+    matches: PLATFORM_MATCHES,
     js: ["src/content/index.ts"]
   }],
   web_accessible_resources: [{

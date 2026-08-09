@@ -1,5 +1,6 @@
 import React from 'react';
 import { useSettingsStore } from '../settings/settingsStore';
+import { getMatchesForPlatform } from '../content/platformConfig';
 
 type Platform = 'youtube' | 'instagram' | 'facebook' | 'tiktok';
 
@@ -14,6 +15,8 @@ const SettingsPage: React.FC = () => {
   const { enabledPlatforms, setEnabledPlatform, resetToDefaults } = useSettingsStore();
 
   const handleToggle = (platform: Platform, checked: boolean) => {
+    // The settings store requests permission to parse the platform's pages
+    // when it is enabled, so the browser prompts the user to allow it.
     setEnabledPlatform(platform, checked);
   };
 
@@ -41,9 +44,14 @@ const SettingsPage: React.FC = () => {
               >
                 <div className="flex items-center gap-3">
                   <span className="text-xl">{config.icon}</span>
-                  <span className="text-sm font-medium text-gray-700">
-                    {config.label}
-                  </span>
+                  <div>
+                    <span className="text-sm font-medium text-gray-700 block">
+                      {config.label}
+                    </span>
+                    <span className="text-xs text-gray-400 block mt-0.5">
+                      Parses {getMatchesForPlatform(key).join(', ')}
+                    </span>
+                  </div>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
                   <input
