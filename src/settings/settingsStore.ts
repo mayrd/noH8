@@ -16,27 +16,35 @@ const STORAGE_KEY = 'noH8_settings';
 const createSettingsStore = () => {
   return create<SettingsState>(
     subscribeWithSelector((set, get) => ({
-      enabledPlatforms: DEFAULT_PLATFORM_STATE,
+      enabledPlatforms: { ...DEFAULT_PLATFORM_STATE },
       setEnabledPlatform: (platform: string, enabled: boolean) => {
-        set((state) => ({
-          enabledPlatforms: {
-            ...state.enabledPlatforms,
-            [platform]: enabled,
-          },
-        }));
+        // Mutate the existing enabledPlatforms object in place so that
+        // previously captured references to the state stay in sync.
+        set((state) => {
+          state.enabledPlatforms[platform] = enabled;
+          return {};
+        });
         // Persist to chrome.storage
+        const { enabledPlatforms } = get();
         if (typeof chrome !== 'undefined' && chrome.storage) {
-          chrome.storage.sync.set({
-            [STORAGE_KEY]: { enabledPlatforms: state.enabledPlatforms },
-          });
+          chrome.storage.sync.set(
+            { [STORAGE_KEY]: { enabledPlatforms } },
+            () => {}
+          );
         }
       },
       resetToDefaults: () => {
-        set({ enabledPlatforms: DEFAULT_PLATFORM_STATE });
+        set((state) => {
+          Object.assign(state.enabledPlatforms, DEFAULT_PLATFORM_STATE);
+          return {};
+        });
         if (typeof chrome !== 'undefined' && chrome.storage) {
-          chrome.storage.sync.set({
-            [STORAGE_KEY]: { enabledPlatforms: DEFAULT_PLATFORM_STATE },
-          });
+          chrome.storage.sync.set(
+            {
+              [STORAGE_KEY]: { enabledPlatforms: { ...DEFAULT_PLATFORM_STATE } },
+            },
+            () => {}
+          );
         }
       },
     }))
