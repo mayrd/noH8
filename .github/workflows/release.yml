@@ -1,14 +1,19 @@
 name: Build & Release Extension
 
-# Builds the browser extension and publishes a GitHub Release containing
+# Builds the browser extension and publishes GitHub Releases containing
 # ready-to-install packages for Chromium-based browsers (Chrome, Edge, Brave,
 # Opera, ...) and Firefox.
 #
-# Triggered automatically when a version tag like `v1.2.3` is pushed, or
-# manually from the Actions tab (packages are uploaded as artifacts only in
-# that case — no release is created without a tag).
+# Triggers:
+#   * push to `main` -> runs the tests; on success, builds the packages,
+#     force-moves the `latest` git tag to the pushed commit, and refreshes the
+#     `latest` GitHub Release so it always points at the newest successful build.
+#   * version tag `vX.Y.Z` -> publishes a permanent, versioned GitHub Release.
+#   * manual dispatch -> builds and uploads the packages as artifacts only
+#     (no tag/release is created).
 on:
   push:
+    branches: [main]
     tags:
       - 'v*'
   workflow_dispatch:
@@ -43,6 +48,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -58,7 +65,7 @@ jobs:
 
       - name: Read extension version
         id: version
-        run: echo "EXT_VERSION=$(node -p \"require('./dist/manifest.json').version\")" >> "$GITHUB_OUTPUT"
+        run: echo "EXT_VERSION=$(node -p "require('./dist/manifest.json').version")" >> "$GITHUB_OUTPUT"
 
       - name: Package for Chromium (zip)
         run: |
@@ -81,8 +88,32 @@ jobs:
           name: browser-packages
           path: releases/*
 
-      - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
+      # On every push to main, point the `latest` git tag and the `latest`
+      # GitHub Release at the newest successfully-tested build.
+      - name: Move 'latest' git tag to this commit
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git tag -f latest
+          git push --force origin latest
+
+      - name: Refresh 'latest' GitHub Release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Remove the previous release attached to the moving `latest` tag
+          # (the tag itself was kept and force-moved above). Ignore if absent.
+          gh release delete latest --yes 2>/dev/null || true
+          gh release create latest releases/* \
+            --title "Latest build from main (${{ github.sha }})" \
+            --notes "$(printf 'Automatic build of the newest commit on main.\n\nExtension version: v${{ steps.version.outputs.EXT_VERSION }}\nCommit: ${{ github.sha }}')" \
+            --latest
+
+      # For a pushed version tag (vX.Y.Z), publish a permanent GitHub Release.
+      - name: Publish versioned GitHub Release
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "$GITHUB_REF_NAME" releases/* --generate-notes
