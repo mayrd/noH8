@@ -1,0 +1,88 @@
+name: Build & Release Extension
+
+# Builds the browser extension and publishes a GitHub Release containing
+# ready-to-install packages for Chromium-based browsers (Chrome, Edge, Brave,
+# Opera, ...) and Firefox.
+#
+# Triggered automatically when a version tag like `v1.2.3` is pushed, or
+# manually from the Actions tab (packages are uploaded as artifacts only in
+# that case — no release is created without a tag).
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run test suite
+        run: npm test
+
+  release:
+    name: Build & package for browsers
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build extension (Chrome MV3)
+        run: npm run build
+
+      - name: Read extension version
+        id: version
+        run: echo "EXT_VERSION=$(node -p \"require('./dist/manifest.json').version\")" >> "$GITHUB_OUTPUT"
+
+      - name: Package for Chromium (zip)
+        run: |
+          mkdir -p releases
+          (cd dist && zip -r "../releases/noH8-${{ steps.version.outputs.EXT_VERSION }}-chromium.zip" .)
+
+      - name: Prepare Firefox package
+        run: npm run package:firefox
+
+      - name: Package for Firefox (xpi)
+        run: |
+          (cd dist-firefox && zip -r "../releases/noH8-${{ steps.version.outputs.EXT_VERSION }}-firefox.xpi" .)
+
+      - name: List packages
+        run: ls -lh releases
+
+      - name: Upload packages as workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-packages
+          path: releases/*
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" releases/* --generate-notes

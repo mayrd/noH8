@@ -1,9 +1,9 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import crx from '@crxjs/vite-plugin';
+import { defineManifest, crx } from '@crxjs/vite-plugin';
 
 // Read manifest
-const manifest = {
+const manifest = defineManifest({
   manifest_version: 3,
   name: "NoH8",
   description: "Privacy-first hate speech detection directly in your browser",
@@ -36,7 +36,7 @@ const manifest = {
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   }
-};
+});
 
 export default defineConfig({
   plugins: [
@@ -46,9 +46,8 @@ export default defineConfig({
   build: {
     rollupOptions: {
       input: {
-        main: './src/content/index.ts',
-        popup: './src/settings/SettingsPopup.tsx',
-        settings: './src/settings/SettingsPage.tsx'
+        popup: new URL('./popup.html', import.meta.url).pathname,
+        settings: new URL('./settings.html', import.meta.url).pathname
       }
     }
   }

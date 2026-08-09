@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "test": "vitest run",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "package:firefox": "node scripts/package-firefox.mjs"
   },
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.7.1",
