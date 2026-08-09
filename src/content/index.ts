@@ -1,5 +1,8 @@
 import { getEnabledAdapters } from './adapters/registry';
 import { initSettingsStore, settingsStore } from '../settings/settingsStore';
+import { analyzeCommentText } from './analysis/sentimentAnalyzer';
+import { renderCommentControls } from './ui/commentUi';
+import type { UiDocument, UiElement, UiWindow } from './ui/commentUi';
 import type { Platform } from '../settings/types';
 
 const PLATFORMS: Platform[] = ['youtube', 'instagram', 'facebook', 'tiktok'];
@@ -9,6 +12,8 @@ const PLATFORMS: Platform[] = ['youtube', 'instagram', 'facebook', 'tiktok'];
  *
  * Reads the enabled platforms from the settings store, then boots every
  * matching platform adapter so it can start observing comments on the page.
+ * Each discovered comment is analysed on-device and gets a rainbow button
+ * behind it that opens a modal explaining the analysis.
  */
 function start(): void {
   const { enabledPlatforms } = settingsStore.getState();
@@ -25,7 +30,20 @@ function start(): void {
       for (const adapter of adapters) {
         adapter.observe((comments) => {
           for (const comment of comments) {
-            console.info(`[NoH8][${adapter.platformName}] comment by ${comment.author}: ${comment.text}`);
+            console.info(
+              `[NoH8][${adapter.platformName}] comment by ${comment.author}: ${comment.text}`
+            );
+            // Skip comments we cannot attach a button to.
+            const container = comment.elementRef;
+            if (!container) continue;
+            const analysis = analyzeCommentText(comment);
+            renderCommentControls({
+              container: container as unknown as UiElement,
+              comment,
+              analysis,
+              doc: document as unknown as UiDocument,
+              windowRef: window as unknown as UiWindow,
+            });
           }
         });
       }
