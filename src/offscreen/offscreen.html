@@ -1,0 +1,16 @@
+<!doctype html>
+<!--
+  Offscreen document hosting the on-device Transformers.js pipeline.
+  Created by the service worker on install; used for all model inference so
+  the heavy WebAssembly/WebGPU work never blocks the UI thread.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NoH8 Offscreen</title>
+  </head>
+  <body>
+    <script type="module" src="./index.ts"></script>
+  </body>
+</html>

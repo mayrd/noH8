@@ -1,6 +1,6 @@
 import { getEnabledAdapters } from './adapters/registry';
 import { initSettingsStore, settingsStore } from '../settings/settingsStore';
-import { analyzeCommentText } from './analysis/sentimentAnalyzer';
+import { inferComment } from './analysis/inferenceClient';
 import { renderCommentControls } from './ui/commentUi';
 import type { UiDocument, UiElement, UiWindow } from './ui/commentUi';
 import type { Platform } from '../settings/types';
@@ -36,13 +36,15 @@ function start(): void {
             // Skip comments we cannot attach a button to.
             const container = comment.elementRef;
             if (!container) continue;
-            const analysis = analyzeCommentText(comment);
-            renderCommentControls({
-              container: container as unknown as UiElement,
-              comment,
-              analysis,
-              doc: document as unknown as UiDocument,
-              windowRef: window as unknown as UiWindow,
+            inferComment(comment).then((analysis) => {
+              if (!comment.elementRef) return; // comment detached while analysing
+              renderCommentControls({
+                container: container as unknown as UiElement,
+                comment,
+                analysis,
+                doc: document as unknown as UiDocument,
+                windowRef: window as unknown as UiWindow,
+              });
             });
           }
         });

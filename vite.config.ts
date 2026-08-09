@@ -23,11 +23,16 @@ const manifest = defineManifest({
       "128": "icons/icon128.png"
     }
   },
-  permissions: ["storage", "scripting"],
-  host_permissions: PLATFORM_MATCHES,
+  permissions: ["storage", "scripting", "offscreen"],
+  host_permissions: [
+    ...PLATFORM_MATCHES,
+    "https://huggingface.co/*",
+    "https://cdn-lfs.huggingface.co/*",
+    "https://cdn.jsdelivr.net/*"
+  ],
   optional_host_permissions: PLATFORM_MATCHES,
   background: {
-    service_worker: "src/background/serviceWorker.js"
+    service_worker: "src/background/serviceWorker.ts"
   },
   content_scripts: [{
     matches: PLATFORM_MATCHES,
@@ -54,7 +59,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         popup: new URL('./popup.html', import.meta.url).pathname,
-        settings: new URL('./settings.html', import.meta.url).pathname
+        settings: new URL('./settings.html', import.meta.url).pathname,
+        offscreen: new URL('./src/offscreen/offscreen.html', import.meta.url).pathname
       }
     }
   }

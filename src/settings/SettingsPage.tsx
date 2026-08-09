@@ -1,6 +1,7 @@
 import React from 'react';
 import { useSettingsStore } from '../settings/settingsStore';
 import { getMatchesForPlatform } from '../content/platformConfig';
+import ModelManager from './ModelManager';
 
 type Platform = 'youtube' | 'instagram' | 'facebook' | 'tiktok';
 
@@ -66,6 +67,8 @@ const SettingsPage: React.FC = () => {
             );
           })}
         </div>
+
+        <ModelManager />
       </div>
 
       <div className="p-4 border-t border-gray-200 bg-white">

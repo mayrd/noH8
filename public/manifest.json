@@ -14,7 +14,8 @@
   },
   "permissions": [
     "storage",
-    "scripting"
+    "scripting",
+    "offscreen"
   ],
   "host_permissions": [
     "https://www.youtube.com/*",
@@ -25,7 +26,10 @@
     "https://www.facebook.com/*",
     "https://m.facebook.com/*",
     "https://www.tiktok.com/*",
-    "https://m.tiktok.com/*"
+    "https://m.tiktok.com/*",
+    "https://huggingface.co/*",
+    "https://cdn-lfs.huggingface.co/*",
+    "https://cdn.jsdelivr.net/*"
   ],
   "optional_host_permissions": [
     "https://www.youtube.com/*",
@@ -39,7 +43,7 @@
     "https://m.tiktok.com/*"
   ],
   "background": {
-    "service_worker": "src/background/serviceWorker.js"
+    "service_worker": "src/background/serviceWorker.ts"
   },
   "content_scripts": [
     {

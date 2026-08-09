@@ -30,10 +30,30 @@ NoH8 uses `Transformers.js` with ONNX WebAssembly/WebGPU to analyze social media
 
 ## Features
 - ✅ 100% local ML inference — no servers, no API costs, no data leaks
+- ✅ Real on-device model via Transformers.js (WebAssembly/WebGPU)
+- ✅ Model Manager in Settings — download, refresh, delete, or switch between suitable models
+- ✅ Graceful fallback to a built-in heuristic analyser while a model is downloading
 - ✅ Multi-platform support: YouTube, Instagram, Facebook, TikTok
 - ✅ Chrome Manifest v3 extension
 - ✅ Sidepanel dashboard for batch review
 - ✅ Inline DOM highlighting of flagged comments
+
+## On-device inference & model management
+NoH8 runs a `text-classification` model inside an **offscreen document** so the
+heavy WebAssembly/WebGPU work never blocks the page. On first install the
+extension creates this offscreen document, seeds the default model selection,
+and starts serving analysis requests through a service-worker relay.
+
+In the settings page you can:
+- **Switch** the active model from a curated catalog (Toxic-BERT, DistilBERT
+  multilingual sentiment, SST-2 sentiment, Twitter RoBERTa sentiment).
+- **Download** a model for offline, instant use.
+- **Refresh** a model (dispose + re-download) to recover from a failed download.
+- **Delete** a model to free browser space.
+
+If no model is downloaded (or a download fails), analysis transparently falls
+back to a fast, deterministic keyword heuristic so every comment is still
+scored.
 
 ## Tech Stack
 - React 18 + TypeScript + Vite (CRXJS)
