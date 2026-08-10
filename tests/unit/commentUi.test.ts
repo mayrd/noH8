@@ -24,6 +24,36 @@ class FakeEl {
   removed = false;
   parent: FakeEl | null = null;
 
+  /** Optional querySelector hook, set per-test when selector-based anchoring is exercised. */
+  querySelector?: (selector: string) => FakeEl | null;
+
+  /** Mirrors the DOM `parentNode` property. */
+  get parentNode(): FakeEl | null {
+    return this.parent;
+  }
+
+  /** Mirrors the DOM `nextSibling` property. */
+  get nextSibling(): FakeEl | null {
+    const siblings = this.parent?.children ?? [];
+    const idx = siblings.indexOf(this);
+    return idx >= 0 && idx + 1 < siblings.length ? siblings[idx + 1] : null;
+  }
+
+  /** Mirrors `Node.insertBefore`: inserts `node` before `ref` (or appends when null). */
+  insertBefore(node: FakeEl, ref: FakeEl | null): void {
+    node.parent = this;
+    if (ref === null) {
+      this.children.push(node);
+    } else {
+      const idx = this.children.indexOf(ref);
+      if (idx === -1) {
+        this.children.push(node);
+      } else {
+        this.children.splice(idx, 0, node);
+      }
+    }
+  }
+
   constructor(tag: string, _init?: FakeElInit) {
     this.tag = tag;
   }
@@ -147,6 +177,101 @@ describe('renderCommentControls', () => {
     button.click();
 
     expect(doc.body.findByData('noh8ModalOverlay')).not.toBeNull();
+  });
+});
+
+describe('renderCommentControls (Instagram heart-button placement)', () => {
+  const HEART_SELECTOR = '[data-heart-button]';
+
+  test('places the rainbow button beneath the heart button when a selector is provided', () => {
+    // Comment container holds an actions row that holds the heart/like button — a
+    // realistic slice of the Instagram comment DOM.
+    const container = new FakeEl('li');
+    const actionsRow = new FakeEl('div');
+    const heartButton = new FakeEl('button');
+    actionsRow.appendChild(heartButton);
+    container.appendChild(actionsRow);
+    container.querySelector = vi.fn((sel: string) =>
+      sel === HEART_SELECTOR ? heartButton : null
+    );
+
+    const doc = makeDoc();
+    const analysis = analyzeCommentText(COMMENT);
+
+    renderCommentControls({
+      container,
+      comment: COMMENT,
+      analysis,
+      doc,
+      heartButtonSelector: HEART_SELECTOR,
+    });
+
+    expect(container.querySelector).toHaveBeenCalledWith(HEART_SELECTOR);
+
+    const rainbow = container.findByData('noh8Rainbow');
+    expect(rainbow).not.toBeNull();
+
+    // The rainbow button is anchored as the heart button's next sibling (under it)
+    // within the SAME parent — not appended to the comment container.
+    expect(rainbow!.parentNode).toBe(heartButton.parentNode);
+    const siblings = heartButton.parentNode!.children;
+    const heartIdx = siblings.indexOf(heartButton);
+    const rainbowIdx = siblings.indexOf(rainbow!);
+    expect(rainbowIdx).toBe(heartIdx + 1);
+  });
+
+  test('falls back to appending to the container when the heart button is absent', () => {
+    const container = new FakeEl('li');
+    const actionsRow = new FakeEl('div');
+    container.appendChild(actionsRow);
+    container.querySelector = vi.fn(() => null);
+
+    const doc = makeDoc();
+    const analysis = analyzeCommentText(COMMENT);
+
+    renderCommentControls({
+      container,
+      comment: COMMENT,
+      analysis,
+      doc,
+      heartButtonSelector: HEART_SELECTOR,
+    });
+
+    const rainbow = container.findByData('noh8Rainbow');
+    expect(rainbow).not.toBeNull();
+    expect(container.children.includes(rainbow!)).toBe(true);
+  });
+
+  test('remains idempotent when anchored under the heart button', () => {
+    const container = new FakeEl('li');
+    const heartButton = new FakeEl('button');
+    container.appendChild(heartButton);
+    container.querySelector = vi.fn((sel: string) =>
+      sel === HEART_SELECTOR ? heartButton : null
+    );
+
+    const doc = makeDoc();
+    const analysis = analyzeCommentText(COMMENT);
+
+    renderCommentControls({
+      container,
+      comment: COMMENT,
+      analysis,
+      doc,
+      heartButtonSelector: HEART_SELECTOR,
+    });
+    renderCommentControls({
+      container,
+      comment: COMMENT,
+      analysis,
+      doc,
+      heartButtonSelector: HEART_SELECTOR,
+    });
+
+    const rainbowButtons = container
+      .findButtons()
+      .filter((b) => b.dataset['noh8Rainbow'] === 'true');
+    expect(rainbowButtons).toHaveLength(1);
   });
 });
 

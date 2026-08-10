@@ -22,6 +22,10 @@ export interface UiElement {
   style?: Record<string, string>;
   dataset?: Record<string, string>;
   remove?(): void;
+  parentNode?: UiElement | null;
+  nextSibling?: UiElement | null;
+  insertBefore?(node: UiElement, ref: UiElement | null): void;
+  querySelector?(selector: string): UiElement | null;
 }
 
 export interface UiDocument {
@@ -40,6 +44,10 @@ export interface CommentControlsOptions {
   analysis: CommentAnalysis;
   doc: UiDocument;
   windowRef?: UiWindow;
+  /** Instagram-only: selector for the comment's heart/like button. When set and
+   * matched, the rainbow button is anchored beneath it; otherwise it is
+   * appended to the comment container (default). */
+  heartButtonSelector?: string;
 }
 
 export interface ModalOptions {
@@ -277,17 +285,17 @@ export function openAnalysisModal(options: ModalOptions): UiElement {
 }
 
 /**
- * Append a rainbow button to a comment container. Clicking it opens the modal
- * with the comment's analysis. Repeated calls are a no-op so the button is
- * only ever rendered once.
+ * Create the rainbow NoH8 button for a comment. Clicking it opens the analysis
+ * modal. Extracted from `renderCommentControls` so the same button can be
+ * anchored to a platform-specific element (e.g. Instagram's heart button)
+ * rather than always appended to the comment container.
  */
-export function renderCommentControls(options: CommentControlsOptions): void {
-  const { container, comment, analysis, doc, windowRef } = options;
-  if (container.dataset?.['noh8RainbowButton'] === 'true') return;
-
-  if (container.setAttribute) container.setAttribute('data-noh8-controls', 'true');
-  if (container.dataset) container.dataset['noh8RainbowButton'] = 'true';
-
+function createRainbowButton(
+  doc: UiDocument,
+  comment: CommentData,
+  analysis: CommentAnalysis,
+  windowRef?: UiWindow
+): UiElement {
   const button = doc.createElement('button');
   button.setAttribute?.('data-noh8-rainbow', 'true');
   button.setAttribute?.('type', 'button');
@@ -319,5 +327,40 @@ export function renderCommentControls(options: CommentControlsOptions): void {
     openAnalysisModal({ doc, comment, analysis, windowRef });
   });
 
+  return button;
+}
+
+/**
+ * Append a rainbow button to a comment container. Clicking it opens the modal
+ * with the comment's analysis. Repeated calls are a no-op so the button is
+ * only ever rendered once.
+ *
+ * When `heartButtonSelector` is provided and matches an element within the
+ * container, the rainbow button is inserted immediately after that element
+ * (beneath the comment's heart/like button on Instagram) instead of being
+ * appended to the end of the comment container. If the anchor can't be found,
+ * the button gracefully falls back to being appended to the container.
+ */
+export function renderCommentControls(options: CommentControlsOptions): void {
+  const { container, comment, analysis, doc, windowRef, heartButtonSelector } =
+    options;
+  if (container.dataset?.['noh8RainbowButton'] === 'true') return;
+
+  if (container.setAttribute) container.setAttribute('data-noh8-controls', 'true');
+  if (container.dataset) container.dataset['noh8RainbowButton'] = 'true';
+
+  const button = createRainbowButton(doc, comment, analysis, windowRef);
+
+  if (heartButtonSelector) {
+    const heart = container.querySelector?.(heartButtonSelector) ?? null;
+    const anchorParent = heart?.parentNode ?? null;
+    if (anchorParent && typeof anchorParent.insertBefore === 'function') {
+      // Place the rainbow button directly beneath the heart button.
+      anchorParent.insertBefore(button, heart?.nextSibling ?? null);
+      return;
+    }
+  }
+
+  // Default: append to the comment container.
   container.appendChild?.(button);
 }

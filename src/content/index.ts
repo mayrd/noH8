@@ -44,6 +44,7 @@ function start(): void {
                 analysis,
                 doc: document as unknown as UiDocument,
                 windowRef: window as unknown as UiWindow,
+                heartButtonSelector: adapter.commentAnchorSelector,
               });
             });
           }

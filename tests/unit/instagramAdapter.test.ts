@@ -169,4 +169,17 @@ test('extractComments parses comment text, author and element refs from the DOM'
     expect(calls[0][0]).not.toBe(calls[1][0]);
     expect(adapter.extractComments()).toHaveLength(2);
   });
+
+  test('declares an Instagram heart/like button selector used to anchor the rainbow button', () => {
+    expect(InstagramAdapter.heartButtonSelector).toBeTruthy();
+    expect(typeof InstagramAdapter.heartButtonSelector).toBe('string');
+    // Targets the like/unlike aria-label on the comment's heart button.
+    expect(InstagramAdapter.heartButtonSelector).toContain('like');
+  });
+
+  test('exposes the heart button anchor selector at runtime on the adapter instance', () => {
+    const adapter = new InstagramAdapter();
+    expect(adapter.commentAnchorSelector).toBe(InstagramAdapter.heartButtonSelector);
+    expect(adapter.commentAnchorSelector).toBeTruthy();
+  });
 });

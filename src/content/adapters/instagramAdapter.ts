@@ -58,6 +58,15 @@ const COMMENT_SECONDARY_SELECTORS = [SIG_FEED_LIST_ITEM, SIG_MODAL_LIST_ITEM];
 const AUTHOR_SELECTOR =
   'a[href^="/"], a[href^="https://www.instagram.com/"], span[dir="auto"]';
 
+/**
+ * Instagram labels each comment's heart/like button with a localized
+ * `aria-label` (e.g. "Like" / "Unlike" in English). We match the button owning
+ * that label so the rainbow NoH8 button can be anchored beneath it. Class
+ * names are intentionally avoided — Instagram obfuscates them aggressively.
+ */
+const HEART_BUTTON_SELECTOR =
+  'button[aria-label*="like" i], [role="button"][aria-label*="like" i]';
+
 interface InstagramAdapterOptions {
   root?: RootLike | null;
   document?: DocumentLike | null;
@@ -72,6 +81,8 @@ export default class InstagramAdapter extends BaseAdapter {
   };
   static readonly commentTextSelector = 'span[dir="auto"]';
   static readonly authorSelector = AUTHOR_SELECTOR;
+  static readonly heartButtonSelector = HEART_BUTTON_SELECTOR;
+  commentAnchorSelector = InstagramAdapter.heartButtonSelector;
 
   platformName = 'instagram' as const;
 

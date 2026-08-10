@@ -14,6 +14,16 @@ export abstract class BaseAdapter {
   abstract injectWarning(commentId: string, result: AnalysisResult): void;
   abstract observe(onNewCommentsFound: (comments: CommentData[]) => void): void;
 
+  /**
+   * Optional CSS selector for a platform-specific anchor element inside the
+   * comment container (e.g. Instagram's heart/like button) beneath which the
+   * rainbow NoH8 button is placed.
+   *
+   * When unset, the rainbow button is appended to the comment container
+   * (default behavior).
+   */
+  commentAnchorSelector?: string;
+
   constructor() {
     if (new.target === BaseAdapter) {
       throw new Error('BaseAdapter is abstract and cannot be instantiated directly.');
