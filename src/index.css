@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased;
+  }
+}
+
+/* noH8-specific component utilities */
+@layer components {
+  .noH8-card {
+    @apply bg-white rounded-xl border border-gray-200 shadow-sm;
+  }
+
+  .noH8-toggle {
+    @apply relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-noh8-500;
+  }
+
+  .noH8-toggle-checked {
+    @apply bg-noh8-600;
+  }
+
+  .noH8-toggle-unchecked {
+    @apply bg-gray-300;
+  }
+
+  .noH8-toggle-knob {
+    @apply inline-block h-5 w-5 transform rounded-full bg-white shadow ring-1 ring-black ring-opacity-5 transition-transform;
+  }
+}

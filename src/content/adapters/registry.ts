@@ -1,7 +1,11 @@
+/// <reference types="vite/client" />
 import type { BaseAdapter } from './baseAdapter';
 
 // Vite's import.meta.glob returns a map of file paths to import functions
-const adapters = import.meta.glob('./*.ts', { eager: false });
+const adapters = import.meta.glob('./*.ts', { eager: false }) as Record<
+  string,
+  () => Promise<any>
+>;
 
 export async function getEnabledAdapters(platforms: string[]): Promise<BaseAdapter[]> {
   const enabledAdapters: BaseAdapter[] = [];

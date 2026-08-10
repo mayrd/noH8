@@ -45,8 +45,10 @@ export async function requestAnalyze(
     text,
     commentId,
   });
-  if (!response.ok) throw new Error(response.error);
-  return response.data;
+      if (response.ok) {
+    return response.data;
+  }
+  throw new Error((response as { ok: false; error: string }).error);
 }
 
 const ACTION_TO_TYPE: Record<'download' | 'delete' | 'refresh', ModelActionType> = {
@@ -65,5 +67,8 @@ export async function requestModelCommand(
     type: ACTION_TO_TYPE[action],
     modelId,
   });
-  if (!response.ok) throw new Error(response.error);
+      if (response.ok) {
+    return;
+  }
+  throw new Error((response as { ok: false; error: string }).error);
 }

@@ -22,6 +22,7 @@ export type NoH8MessageType = (typeof MSG)[keyof typeof MSG];
 export interface AnalyzeRequest {
   type: typeof MSG.ANALYZE;
   text: string;
+  commentId?: string;
 }
 
 export type ModelActionType =

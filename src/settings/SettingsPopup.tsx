@@ -10,40 +10,44 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ onOpenSettings }) => {
   const { enabledPlatforms } = useSettingsStore();
 
   // In a real implementation, this would listen to messages from content script
-  // about flagged comments on the current page
+  // about flagged comments on the current page.
   useEffect(() => {
-    // Placeholder: would listen for flagged comments from background script
     setFlaggedCount(0);
   }, []);
 
   const enabledCount = Object.values(enabledPlatforms).filter(Boolean).length;
 
   return (
-    <div className="w-64 p-3 bg-white shadow-lg rounded-lg border border-gray-200">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold text-gray-800">NoH8</h3>
-        <span className="text-xs text-gray-500">
+    <div className="w-80 p-4 bg-white shadow-xl rounded-xl border border-gray-200">
+      {/* Header */}
+      <header className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <span className="text-xl">🌈</span>
+          <h3 className="font-semibold text-gray-900 text-lg">NoH8</h3>
+        </div>
+        <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
           {enabledCount}/4 platforms
         </span>
-      </div>
+      </header>
 
-      <div className="mb-3 p-2 bg-gray-50 rounded">
+      {/* Flagged comments summary */}
+      <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
         <div className="flex justify-between items-center">
           <span className="text-sm text-gray-600">Flagged Comments</span>
-          <span className="font-mono text-lg font-bold text-red-600">
-            {flaggedCount}
-          </span>
+          <span className="font-mono text-2xl font-bold text-red-600">{flaggedCount}</span>
         </div>
       </div>
 
+      {/* Open Settings button */}
       <button
         onClick={onOpenSettings}
-        className="w-full px-3 py-2 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+        className="w-full px-4 py-2.5 text-sm font-medium text-white bg-noh8-600 rounded-lg hover:bg-noh8-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-noh8-500"
       >
         Open Settings
       </button>
 
-      <div className="mt-3 pt-3 border-t border-gray-100">
+      {/* Footer */}
+      <div className="mt-4 pt-3 border-t border-gray-100">
         <p className="text-xs text-gray-400 text-center">
           Privacy-first hate speech detection
         </p>

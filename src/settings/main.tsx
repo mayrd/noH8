@@ -2,6 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import SettingsPage from './SettingsPage';
 import { initModelStore } from './modelStore';
+import '../index.css';
 
 async function mount() {
   const container = document.getElementById('root');

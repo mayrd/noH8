@@ -1,6 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import SettingsPopup from './SettingsPopup';
+import '../index.css';
 
 const container = document.getElementById('root');
 
