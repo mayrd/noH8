@@ -38,4 +38,17 @@ describe('buildFirefoxManifest', () => {
     expect(input.background.type).toBe('module');
     expect(input.browser_specific_settings).toBeUndefined();
   });
+
+  it('preserves the WebAssembly-enabling content_security_policy', () => {
+    const input = {
+      content_security_policy: {
+        extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
+      },
+    };
+    const manifest = buildFirefoxManifest(input);
+
+    expect(manifest.content_security_policy).toEqual(
+      input.content_security_policy
+    );
+  });
 });

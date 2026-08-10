@@ -38,6 +38,13 @@ const manifest = defineManifest({
     matches: PLATFORM_MATCHES,
     js: ["src/content/index.ts"]
   }],
+  // Allow WebAssembly compilation in the offscreen document where the
+  // @xenova/transformers ONNX runtime runs. Without 'wasm-unsafe-eval' the
+  // MV3 default CSP (script-src 'self') blocks WebAssembly.instantiate()
+  // and model download/inference fails.
+  content_security_policy: {
+    extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'",
+  },
   web_accessible_resources: [{
     resources: ["icons/*.png"],
     matches: ["<all_urls>"]
