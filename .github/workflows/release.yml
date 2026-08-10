@@ -7,12 +7,12 @@ name: Test Build Release
 # CI/CD — tests run first and build & release only proceed on success
 # (`release` job has `needs: test` + is skipped on PRs):
 #   * pull request to `main` -> runs the test suite only (CI gate before merge)
-#   * push to `main` -> tests pass, then builds packages and uploads them
-#     as workflow artifacts only (no tag/release is created).
+#   * push to `main` -> tests pass, then builds packages and publishes a
+#     "latest" GitHub Release (pre-release, overwriting previous latest)
 #   * version tag `vX.Y.Z` -> tests pass, then builds and publishes a
 #     permanent, versioned GitHub Release.
-#   * manual dispatch -> tests pass, then builds and uploads packages as
-#     artifacts only (no tag/release is created).
+#   * manual dispatch -> tests pass, then builds and publishes a
+#     "latest" GitHub Release (pre-release, overwriting previous latest)
 on:
   push:
     branches: [main]
@@ -101,3 +101,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "$GITHUB_REF_NAME" releases/* --generate-notes
+
+      # For push to main or manual dispatch, publish/update a "latest" pre-release.
+      - name: Publish latest pre-release
+        if: github.event_name != 'push' || !startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Delete the previous "latest" release if it exists
+          gh release delete latest --yes || true
+          # Create a new "latest" pre-release
+          gh release create latest releases/* --prerelease --title "Latest Build" --generate-notes
