@@ -4,18 +4,23 @@ name: Build & Release Extension
 # ready-to-install packages for Chromium-based browsers (Chrome, Edge, Brave,
 # Opera, ...) and Firefox.
 #
-# Triggers:
-#   * push to `main` -> runs the tests; on success, builds the packages,
-#     force-moves the `latest` git tag to the pushed commit, and refreshes the
-#     `latest` GitHub Release so it always points at the newest successful build.
-#   * version tag `vX.Y.Z` -> publishes a permanent, versioned GitHub Release.
-#   * manual dispatch -> builds and uploads the packages as artifacts only
-#     (no tag/release is created).
+# CI/CD — tests run first and build & release only proceed on success
+# (`release` job has `needs: test` + is skipped on PRs):
+#   * pull request to `main` -> runs the test suite only (CI gate before merge)
+#   * push to `main` -> tests pass, then builds packages, force-moves the
+#     `latest` git tag to the pushed commit, and refreshes the `latest`
+#     GitHub Release so it always points at the newest successful build.
+#   * version tag `vX.Y.Z` -> tests pass, then builds and publishes a
+#     permanent, versioned GitHub Release.
+#   * manual dispatch -> tests pass, then builds and uploads packages as
+#     artifacts only (no tag/release is created).
 on:
   push:
     branches: [main]
     tags:
       - 'v*'
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -44,6 +49,9 @@ jobs:
   release:
     name: Build & package for browsers
     needs: test
+    # Skip build & release on pull requests — only run tests as a CI gate.
+    # Build & release only happen on push to main, version tags, or manual dispatch.
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
