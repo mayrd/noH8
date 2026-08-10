@@ -5,4 +5,5 @@ releases/
 *.local
 .vscode/
 .idea/
-EOF
+.cline/
+.npm-cache/

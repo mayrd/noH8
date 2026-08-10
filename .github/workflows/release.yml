@@ -1,4 +1,4 @@
-name: Build & Release Extension
+name: Test Build Release 
 
 # Builds the browser extension and publishes GitHub Releases containing
 # ready-to-install packages for Chromium-based browsers (Chrome, Edge, Brave,
