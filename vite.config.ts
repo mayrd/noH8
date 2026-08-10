@@ -30,7 +30,10 @@ const manifest = defineManifest({
     "https://cdn-lfs.huggingface.co/*",
     "https://cdn.jsdelivr.net/*"
   ],
-  optional_host_permissions: PLATFORM_MATCHES,
+  // Social media URLs live in host_permissions (required so that the static
+  // content_scripts can inject). They are NOT also listed under
+  // optional_host_permissions — doing so makes that field entirely redundant
+  // and Chrome emits a warning for every overlapping entry.
   background: {
     service_worker: "src/background/serviceWorker.ts"
   },

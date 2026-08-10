@@ -11,7 +11,8 @@ const chromeStorageMock = {
 };
 
 const chromePermissionsMock = {
-  request: vi.fn().mockResolvedValue(true)
+  request: vi.fn().mockResolvedValue(true),
+  contains: vi.fn().mockResolvedValue(false),
 };
 
 global.chrome = { storage: chromeStorageMock, permissions: chromePermissionsMock } as any;
@@ -53,21 +54,27 @@ describe('SettingsStore', () => {
     });
   });
 
-  test('enabling a platform requests permission to parse its pages', () => {
+  test('enabling a platform checks then requests permission to parse its pages', async () => {
+    const instagramOrigins = [
+      'https://www.instagram.com/*',
+      'https://m.instagram.com/*',
+      'https://instagram.com/*'
+    ];
     const state = settingsStore.getState();
     state.setEnabledPlatform('instagram', true);
-    expect(chromePermissionsMock.request).toHaveBeenCalledWith({
-      origins: [
-        'https://www.instagram.com/*',
-        'https://m.instagram.com/*',
-        'https://instagram.com/*'
-      ]
-    });
+    // requestPlatformPermission is async (contains → request), flush microtasks
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // contains is checked first; since it returns false (not already granted),
+    // request is then called.
+    expect(chromePermissionsMock.contains).toHaveBeenCalledWith({ origins: instagramOrigins });
+    expect(chromePermissionsMock.request).toHaveBeenCalledWith({ origins: instagramOrigins });
   });
 
   test('disabling a platform does not request additional permissions', () => {
     const state = settingsStore.getState();
     state.setEnabledPlatform('instagram', false);
+    expect(chromePermissionsMock.contains).not.toHaveBeenCalled();
     expect(chromePermissionsMock.request).not.toHaveBeenCalled();
   });
 });

@@ -54,5 +54,23 @@ describe('manifest content_security_policy', () => {
     const csp = (manifest.content_security_policy as Record<string, string>);
     expect(csp.extension_pages).not.toMatch(/^script-src 'self'$/);
     expect(csp.extension_pages).not.toMatch(/script-src 'self';\s*object-src 'self'$/);
+    });
+});
+
+describe('manifest host permissions', () => {
+  /**
+   * Chrome warns when an entry in `optional_host_permissions` duplicates one
+   * in `host_permissions`, omitting it silently. Since content scripts in MV3
+   * require host_permissions to inject, the social media URLs must live in
+   * `host_permissions` — making `optional_host_permissions` redundant and
+   * causing Chrome to emit noise in the console.
+   */
+  it('does not declare optional_host_permissions that overlap with host_permissions', () => {
+    const manifest = readManifest();
+    const hostPerms = new Set(manifest.host_permissions as string[] ?? []);
+    const optionalPerms = (manifest.optional_host_permissions as string[]) ?? [];
+    const overlap = optionalPerms.filter((p: string) => hostPerms.has(p));
+
+    expect(overlap).toHaveLength(0);
   });
 });
