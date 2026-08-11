@@ -51,27 +51,28 @@ function start(): void {
           }
         });
       }
-    })
-// Setup rainbow button for comment draft textareas
-    const enabledSetting = settingsStore.getState().reviewOwnCommentDrafts;
-    if (enabledSetting) {
-      adapters.forEach((adapter) => {
-        const selector = adapter.commentTextareaSelector;
-        if (!selector) return;
-        const matches = Array.from(document.querySelectorAll<Element>(selector));
-        matches.forEach((el) => {
-          if (el.dataset?.['noh8DraftButton'] === 'true') return;
-          renderDraftReviewButton({
-            textarea: el as unknown as UiElement,
-            platform: adapter.platformName as string,
-            doc: document as unknown as UiDocument,
-            windowRef: window as unknown as UiWindow,
-            analyze: inferComment,
-            author: 'You',
+
+      // Setup rainbow button for comment draft textareas
+      const enabledSetting = settingsStore.getState().reviewOwnCommentDrafts;
+      if (enabledSetting) {
+        adapters.forEach((adapter) => {
+          const selector = adapter.commentTextareaSelector;
+          if (!selector) return;
+          const matches = Array.from(document.querySelectorAll<HTMLElement>(selector));
+          matches.forEach((el) => {
+            if (el.dataset?.['noh8DraftButton'] === 'true') return;
+            renderDraftReviewButton({
+              textarea: el as unknown as UiElement,
+              platform: adapter.platformName,
+              doc: document as unknown as UiDocument,
+              windowRef: window as unknown as UiWindow,
+              analyze: inferComment,
+              author: 'You',
+            });
           });
         });
-      });
-    }
+      }
+    })
     .catch((error) => {
       console.error('[NoH8] failed to initialise platform adapters:', error);
     });

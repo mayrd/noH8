@@ -83,8 +83,10 @@ export const settingsStore = createSettingsStore();
 // whenever the store state changes.
 export const useSettingsStore = (): SettingsState => useStore(settingsStore);
 
-// Re-export store instance methods for backward compatibility
-export const { getState, setState, subscribe, destroy } = settingsStore;
+// Re-export store instance methods for backward compatibility. `destroy` is
+// intentionally omitted: zustand's bound-store type does not expose it, it was
+// unused across the codebase, and store teardown is handled by the runtime.
+export const { getState, setState, subscribe } = settingsStore;
 
 // Helper to initialize store from storage (called once on app load)
 export async function initSettingsStore() {
