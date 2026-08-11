@@ -28,7 +28,7 @@ const createSettingsStore = () => {
     subscribeWithSelector((set, get) => ({
       enabledPlatforms: { ...DEFAULT_PLATFORM_STATE },
       reviewOwnCommentDrafts: DEFAULT_REVIEW_DRAFTS,
-      setEnabledPlatform: (platform: string, enabled: boolean) => {
+      setEnabledPlatform: (platform: Platform, enabled: boolean) => {
         // Mutate the existing enabledPlatforms object in place so that
         // previously captured references to the state stay in sync.
         set((state) => {
@@ -37,16 +37,16 @@ const createSettingsStore = () => {
         });
         // When enabling a platform, ask the user to allow parsing its pages.
         if (enabled) {
-          void requestPlatformPermission(platform as Platform);
+          void requestPlatformPermission(platform);
         }
         // Persist to chrome.storage
-        const { enabledPlatforms, reviewOwnCommentDrafts } = get();
-        persist({ enabledPlatforms, reviewOwnCommentDrafts });
+        const state = get();
+        persist({ enabledPlatforms: state.enabledPlatforms, reviewOwnCommentDrafts: state.reviewOwnCommentDrafts });
       },
       setReviewOwnCommentDrafts: (enabled: boolean) => {
         set((state) => { state.reviewOwnCommentDrafts = enabled; });
-        const { enabledPlatforms, reviewOwnCommentDrafts } = get();
-        persist({ enabledPlatforms, reviewOwnCommentDrafts });
+        const state = get();
+        persist({ enabledPlatforms: state.enabledPlatforms, reviewOwnCommentDrafts: state.reviewOwnCommentDrafts });
       },
       resetToDefaults: () => {
         set((state) => {
@@ -76,6 +76,9 @@ export const settingsStore = createSettingsStore();
 // React hook wrapper — reactive via Zustand's useStore so components re-render
 // whenever the store state changes.
 export const useSettingsStore = (): SettingsState => useStore(settingsStore);
+
+// Re-export store instance methods for backward compatibility
+export const { getState, setState, subscribe, destroy } = settingsStore;
 
 // Helper to initialize store from storage (called once on app load)
 export async function initSettingsStore() {

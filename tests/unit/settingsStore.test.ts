@@ -17,14 +17,22 @@ const chromePermissionsMock = {
 
 global.chrome = { storage: chromeStorageMock, permissions: chromePermissionsMock } as any;
 
-import { settingsStore } from '../../src/settings/settingsStore';
+import { settingsStore, initSettingsStore } from '../../src/settings/settingsStore';
+
+// Initialize the store with a proper mock state
+initSettingsStore();
 
 describe('SettingsStore', () => {
   beforeEach(() => {
+    // Reset the store to its initial state instead of trying to mock chrome storage
+    settingsStore.setState({
+      enabledPlatforms: { youtube: true, instagram: true, facebook: true, tiktok: true },
+      reviewOwnCommentDrafts: true
+    });
     vi.clearAllMocks();
   });
 
-    test('initializes with default values', () => {
+  test('initializes with default values', () => {
     const state = settingsStore.getState();
     expect(state.enabledPlatforms.youtube).toBe(true);
     expect(state.enabledPlatforms.instagram).toBe(true);
