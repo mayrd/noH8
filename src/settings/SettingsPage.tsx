@@ -35,7 +35,13 @@ const PLATFORM_META: Record<Platform, { label: string; color: string; Icon: Reac
 };
 
 const SettingsPage: React.FC = () => {
-  const { enabledPlatforms, setEnabledPlatform, resetToDefaults } = useSettingsStore();
+  const {
+    enabledPlatforms,
+    setEnabledPlatform,
+    resetToDefaults,
+    reviewOwnCommentDrafts,
+    setReviewOwnCommentDrafts,
+  } = useSettingsStore();
 
   const handleToggle = (platform: Platform, checked: boolean) => {
     setEnabledPlatform(platform, checked);
@@ -91,7 +97,6 @@ const SettingsPage: React.FC = () => {
                       <div>
                         <span className="text-sm font-medium text-gray-800 block">
                           {meta.label}
-/* Size and VRAM info */\n<span className="text-xs text-gray-500 block mt-0.5">Size: {model.sizeMb} MB | VRAM: {model.vramMb} MB</span>\n
                         </span>
                         <span className="text-xs text-gray-500 block mt-0.5">
                           Scans {matches.length} origin{matches.length !== 1 ? 's' : ''}
@@ -124,9 +129,37 @@ const SettingsPage: React.FC = () => {
             </div>
           </section>
 
+          {/* Review own comment drafts section */}
+          <section>
+            <h2 className="text-lg font-semibold text-gray-800 mb-1">Comment Handling</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              Optionally review your own comment drafts for harmful language before you post them.
+            </p>
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-800">Review my own comment drafts</span>
+              <label
+                className={`relative inline-flex items-center h-6 w-11 rounded-full cursor-pointer transition-colors ${
+                  reviewOwnCommentDrafts ? 'bg-noh8-600' : 'bg-gray-300'
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  checked={reviewOwnCommentDrafts}
+                  onChange={(e) => setReviewOwnCommentDrafts(e.target.checked)}
+                  aria-label="Review own comment drafts"
+                  className="sr-only peer"
+                />
+                <span
+                  className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${
+                    reviewOwnCommentDrafts ? 'translate-x-5' : ''
+                  }`}
+                />
+              </label>
+            </div>
+          </section>
+
           {/* Model manager section */}
           <section>
-{/* Bottom download button */\n<div className=\"mt-8 text-center\">\n  <button\n    onClick={() => console.log('Download model clicked')}\n    className=\"px-6 py-3 bg-noh8-600 text-white rounded-lg hover:bg-noh8-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-noh8-500\"\n  >\n    Download Model\n  </button>\n</div>\n
             <ModelManager />
           </section>
         </div>
@@ -137,7 +170,6 @@ const SettingsPage: React.FC = () => {
         <button
           onClick={handleReset}
           className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-noh8-500"
-<div className="mt-4 pt-3 border-t border-gray-200 flex justify-center space-x-2">\n  <a href=\"https://github.com/your-org/noH8-extension\" target=\"_blank\" rel=\"noopener\" className=\"text-xs text-gray-600 hover:text-noh8-600\">GitHub Repository</a>\n  <a href=\"https://github.com/your-org/noH8-extension/issues\" target=\"_blank\" rel=\"noopener\" className=\"text-xs text-gray-600 hover:text-noh8-600\">Report an Issue</a>\n</div>
         >
           Reset to Defaults
         </button>

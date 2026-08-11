@@ -112,4 +112,20 @@ describe('SettingsStore', () => {
     expect(chromePermissionsMock.contains).not.toHaveBeenCalled();
     expect(chromePermissionsMock.request).not.toHaveBeenCalled();
   });
+
+  test('actions mutate individual fields without wiping out the rest of the state', () => {
+    settingsStore.getState().setReviewOwnCommentDrafts(false);
+    const after = settingsStore.getState();
+    // The update must only affect the target field.
+    expect(after.reviewOwnCommentDrafts).toBe(false);
+    // The rest of the state (data + action methods) must be preserved.
+    expect(after.enabledPlatforms).toEqual({
+      youtube: true,
+      instagram: true,
+      facebook: true,
+      tiktok: true,
+    });
+    expect(typeof after.setEnabledPlatform).toBe('function');
+    expect(typeof after.resetToDefaults).toBe('function');
+  });
 });

@@ -44,7 +44,13 @@ const createSettingsStore = () => {
         persist({ enabledPlatforms: state.enabledPlatforms, reviewOwnCommentDrafts: state.reviewOwnCommentDrafts });
       },
       setReviewOwnCommentDrafts: (enabled: boolean) => {
-        set((state) => { state.reviewOwnCommentDrafts = enabled; });
+        // Mutate in place and return {} so the state reference is preserved
+        // (mirrors setEnabledPlatform). Returning undefined would make zustand
+        // replace the ENTIRE store state with undefined.
+        set((state) => {
+          state.reviewOwnCommentDrafts = enabled;
+          return {};
+        });
         const state = get();
         persist({ enabledPlatforms: state.enabledPlatforms, reviewOwnCommentDrafts: state.reviewOwnCommentDrafts });
       },
