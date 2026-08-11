@@ -75,6 +75,10 @@ export default class FacebookAdapter extends BaseAdapter {
   /** Domains/pages this adapter parses when opened in the browser. */
   hostPermissions: string[] = getMatchesForPlatform(this.platformName);
 
+  /** Selector identifying the comment composer textarea(s). */
+  static readonly commentTextareaSelector = COMMENT_TEXTAREA_SELECTOR;
+  commentTextareaSelector = FacebookAdapter.commentTextareaSelector;
+
   private readonly root: RootLike | null;
   private readonly documentRef: DocumentLike | null;
   private readonly MutationObserverCtor: MutationObserverCtor;

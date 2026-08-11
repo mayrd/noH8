@@ -3,6 +3,7 @@ import {
   buildCommentReportUrl,
   renderCommentControls,
   openAnalysisModal,
+  renderDraftReviewButton,
 } from '../../src/content/ui/commentUi';
 import { analyzeCommentText } from '../../src/content/analysis/sentimentAnalyzer';
 import type { CommentAnalysis } from '../../src/shared/types';
@@ -14,13 +15,14 @@ interface FakeElInit {
 }
 
 class FakeEl {
-  tag: string;
+    tag: string;
   children: FakeEl[] = [];
   handlers: Record<string, (event?: unknown) => void> = {};
   attrs: Record<string, string> = {};
   style: Record<string, string> = {};
   dataset: Record<string, string> = {};
   textContent: string | null = null;
+  value: string | null = null;
   removed = false;
   parent: FakeEl | null = null;
 
@@ -307,7 +309,7 @@ describe('openAnalysisModal', () => {
     expect(win.open).toHaveBeenCalledWith(buildCommentReportUrl(COMMENT), '_blank');
   });
 
-  test('clicking the close button removes the overlay', () => {
+      test('clicking the close button removes the overlay', () => {
     const doc = makeDoc();
     const analysis = analyzeCommentText(COMMENT);
 
@@ -316,5 +318,145 @@ describe('openAnalysisModal', () => {
     const overlay = doc.body.findByData('noh8ModalOverlay')!;
     overlay.findByData('noh8Close')!.click();
     expect(overlay.removed).toBe(true);
+  });
+});
+
+describe('renderDraftReviewButton', () => {
+  const DRAFT_TEXT = 'this is a draft comment';
+  const ANALYZE = vi.fn().mockResolvedValue(
+    analyzeCommentText({ id: 'draft-1', text: DRAFT_TEXT })
+  );
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    ANALYZE.mockResolvedValue(
+      analyzeCommentText({ id: 'draft-1', text: DRAFT_TEXT })
+    );
+  });
+
+  test('places a rainbow button as the next sibling of the textarea', () => {
+    const doc = makeDoc();
+    const parent = new FakeEl('div');
+    const textarea = new FakeEl('textarea');
+    textarea.value = DRAFT_TEXT;
+    parent.appendChild(textarea);
+
+    renderDraftReviewButton({
+      textarea,
+      platform: 'instagram',
+      doc,
+      analyze: ANALYZE,
+    });
+
+    const rainbow = parent.findByData('noh8DraftRainbow');
+    expect(rainbow).not.toBeNull();
+    expect(rainbow!.tag).toBe('button');
+    expect(rainbow!.textContent).toBe('🌈');
+    expect(rainbow!.parentNode).toBe(parent);
+    // Rainbow button is inserted immediately after the textarea.
+    const siblings = parent.children;
+    expect(siblings[siblings.indexOf(textarea) + 1]).toBe(rainbow);
+  });
+
+  test('does not render a second button when called twice on the same textarea', () => {
+    const doc = makeDoc();
+    const parent = new FakeEl('div');
+    const textarea = new FakeEl('textarea');
+    parent.appendChild(textarea);
+
+    renderDraftReviewButton({ textarea, platform: 'tiktok', doc, analyze: ANALYZE });
+    renderDraftReviewButton({ textarea, platform: 'tiktok', doc, analyze: ANALYZE });
+
+    const buttons = parent
+      .findButtons()
+      .filter((b) => b.dataset['noh8DraftRainbow'] === 'true');
+    expect(buttons).toHaveLength(1);
+  });
+
+    test('skips textareas that already have a draft button', () => {
+    const doc = makeDoc();
+    const parent = new FakeEl('div');
+    const textarea = new FakeEl('textarea');
+    parent.appendChild(textarea);
+
+    // Pre-mark the textarea as already processed (e.g. by a previous pass).
+    textarea.dataset['noh8DraftButton'] = 'true';
+    renderDraftReviewButton({ textarea, platform: 'youtube', doc, analyze: ANALYZE });
+
+    const buttons = parent
+      .findButtons()
+      .filter((b) => b.dataset['noh8DraftRainbow'] === 'true');
+    expect(buttons).toHaveLength(0);
+  });
+
+  test('clicking the button reads the textarea value, analyzes it and opens a modal', async () => {
+    const doc = makeDoc();
+    const win = makeWindow();
+    const parent = new FakeEl('div');
+    const textarea = new FakeEl('textarea');
+    textarea.value = 'you are awful and stupid';
+    parent.appendChild(textarea);
+
+    renderDraftReviewButton({
+      textarea,
+      platform: 'facebook',
+      doc,
+      windowRef: win,
+      analyze: ANALYZE,
+    });
+
+    const button = parent.findByData('noh8DraftRainbow')!;
+    button.click();
+
+    // Flush the async analyze handler.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(ANALYZE).toHaveBeenCalledWith({
+      id: expect.stringContaining('facebook'),
+      text: 'you are awful and stupid',
+    });
+    expect(doc.body.findByData('noh8ModalOverlay')).not.toBeNull();
+  });
+
+  test('reads contenteditable textContent when value is unset', async () => {
+    const doc = makeDoc();
+    const parent = new FakeEl('div');
+    const editor = new FakeEl('div');
+    editor.textContent = 'hateful contenteditable text';
+    parent.appendChild(editor);
+
+    renderDraftReviewButton({
+      textarea: editor,
+      platform: 'youtube',
+      doc,
+      analyze: ANALYZE,
+    });
+
+    const button = parent.findByData('noh8DraftRainbow')!;
+    button.click();
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(ANALYZE).toHaveBeenCalledWith(
+      expect.objectContaining({ text: 'hateful contenteditable text' })
+    );
+  });
+
+  test('falls back to appending the button to the textarea when it has no parent', () => {
+    const doc = makeDoc();
+    const textarea = new FakeEl('textarea');
+    textarea.value = 'orphan textarea';
+    // No parent — insertBefore/appendChild on parentNode won't be available.
+
+    renderDraftReviewButton({
+      textarea,
+      platform: 'instagram',
+      doc,
+      analyze: ANALYZE,
+    });
+
+    // Button should still be created and attached to the textarea itself.
+    const rainbow = textarea.findByData('noh8DraftRainbow');
+    expect(rainbow).not.toBeNull();
   });
 });

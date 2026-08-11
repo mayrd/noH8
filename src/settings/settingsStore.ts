@@ -11,7 +11,15 @@ const DEFAULT_PLATFORM_STATE: SettingsState['enabledPlatforms'] = {
   tiktok: true,
 };
 
+const DEFAULT_REVIEW_DRAFTS = true;
+
 const STORAGE_KEY = 'noH8_settings';
+
+/** Shape of the persisted settings entry in chrome.storage.sync. */
+interface SettingsStorage {
+  enabledPlatforms?: Record<Platform, boolean>;
+  reviewOwnCommentDrafts?: boolean;
+}
 
 // Create a plain store for use in tests and non-react contexts.
 // Mirrors the pattern used in modelStore.ts for consistent Zustand middleware typing.
@@ -19,6 +27,7 @@ const createSettingsStore = () => {
   return create<SettingsState>()(
     subscribeWithSelector((set, get) => ({
       enabledPlatforms: { ...DEFAULT_PLATFORM_STATE },
+      reviewOwnCommentDrafts: DEFAULT_REVIEW_DRAFTS,
       setEnabledPlatform: (platform: string, enabled: boolean) => {
         // Mutate the existing enabledPlatforms object in place so that
         // previously captured references to the state stay in sync.
@@ -31,31 +40,35 @@ const createSettingsStore = () => {
           void requestPlatformPermission(platform as Platform);
         }
         // Persist to chrome.storage
-        const { enabledPlatforms } = get();
-        if (typeof chrome !== 'undefined' && chrome.storage) {
-          chrome.storage.sync.set(
-            { [STORAGE_KEY]: { enabledPlatforms } },
-            () => {}
-          );
-        }
+        const { enabledPlatforms, reviewOwnCommentDrafts } = get();
+        persist({ enabledPlatforms, reviewOwnCommentDrafts });
+      },
+      setReviewOwnCommentDrafts: (enabled: boolean) => {
+        set({ reviewOwnCommentDrafts: enabled });
+        const { enabledPlatforms, reviewOwnCommentDrafts } = get();
+        persist({ enabledPlatforms, reviewOwnCommentDrafts });
       },
       resetToDefaults: () => {
         set((state) => {
           Object.assign(state.enabledPlatforms, DEFAULT_PLATFORM_STATE);
+          state.reviewOwnCommentDrafts = DEFAULT_REVIEW_DRAFTS;
           return {};
         });
-        if (typeof chrome !== 'undefined' && chrome.storage) {
-          chrome.storage.sync.set(
-            {
-              [STORAGE_KEY]: { enabledPlatforms: { ...DEFAULT_PLATFORM_STATE } },
-            },
-            () => {}
-          );
-        }
+        persist({
+          enabledPlatforms: { ...DEFAULT_PLATFORM_STATE },
+          reviewOwnCommentDrafts: DEFAULT_REVIEW_DRAFTS,
+        });
       },
     }))
   );
 };
+
+/** Write the given settings snapshot to chrome.storage.sync (no-op without chrome). */
+function persist(settings: SettingsStorage): void {
+  if (typeof chrome !== 'undefined' && chrome.storage) {
+    chrome.storage.sync.set({ [STORAGE_KEY]: settings }, () => {});
+  }
+}
 
 // Export the main store instance
 export const settingsStore = createSettingsStore();
@@ -68,11 +81,17 @@ export const useSettingsStore = (): SettingsState => useStore(settingsStore);
 export async function initSettingsStore() {
   if (typeof chrome !== 'undefined' && chrome.storage) {
     chrome.storage.sync.get(STORAGE_KEY, (result) => {
-      const stored = result[STORAGE_KEY] as { enabledPlatforms?: SettingsState['enabledPlatforms'] } | undefined;
-      if (stored?.enabledPlatforms) {
-        settingsStore.setState({
-          enabledPlatforms: stored.enabledPlatforms,
-        });
+      const stored = result[STORAGE_KEY] as SettingsStorage | undefined;
+      if (!stored) return;
+      const next: Partial<SettingsState> = {};
+      if (stored.enabledPlatforms) {
+        next.enabledPlatforms = stored.enabledPlatforms;
+      }
+      if (typeof stored.reviewOwnCommentDrafts === 'boolean') {
+        next.reviewOwnCommentDrafts = stored.reviewOwnCommentDrafts;
+      }
+      if (Object.keys(next).length > 0) {
+        settingsStore.setState(next);
       }
     });
   }

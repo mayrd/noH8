@@ -70,10 +70,17 @@ describe('InstagramAdapter', () => {
     expect(adapter.platformName).toBe('instagram');
   });
 
-  test('declares the instagram domains it should parse in the browser', () => {
+    test('declares the instagram domains it should parse in the browser', () => {
     const adapter = new InstagramAdapter();
     expect(adapter.hostPermissions).toEqual(INSTAGRAM_MATCHES);
     expect(adapter.hostPermissions).toContain('https://www.instagram.com/*');
+  });
+
+  test('exposes a comment textarea selector for draft review', () => {
+    expect(InstagramAdapter.commentTextareaSelector).toBeTruthy();
+    expect(typeof InstagramAdapter.commentTextareaSelector).toBe('string');
+    const adapter = new InstagramAdapter();
+    expect(adapter.commentTextareaSelector).toBe(InstagramAdapter.commentTextareaSelector);
   });
 test('extractComments parses comment text, author and element refs from the DOM', () => {
     const commentEl = makeCommentEl('you are toxic', 'tester_user', {

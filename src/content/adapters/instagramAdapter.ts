@@ -67,6 +67,14 @@ const AUTHOR_SELECTOR =
 const HEART_BUTTON_SELECTOR =
   'button[aria-label*="like" i], [role="button"][aria-label*="like" i]';
 
+/**
+ * Selector for the textarea / contenteditable element where the user composes
+ * a new comment. Instagram's comment composer uses a `textarea` (often with
+ * a placeholder containing "comment") inside the comment form.
+ */
+const COMMENT_TEXTAREA_SELECTOR =
+  'textarea[placeholder*="comment" i], textarea, [role="textbox"][contenteditable="true"]';
+
 interface InstagramAdapterOptions {
   root?: RootLike | null;
   document?: DocumentLike | null;
@@ -85,6 +93,10 @@ export default class InstagramAdapter extends BaseAdapter {
   commentAnchorSelector = InstagramAdapter.heartButtonSelector;
 
   platformName = 'instagram' as const;
+
+  /** Selector identifying the comment composer textarea(s). */
+  static readonly commentTextareaSelector = COMMENT_TEXTAREA_SELECTOR;
+  commentTextareaSelector = InstagramAdapter.commentTextareaSelector;
 
   /** Domains/pages this adapter parses when opened in the browser. */
   hostPermissions: string[] = getMatchesForPlatform(this.platformName);

@@ -67,10 +67,17 @@ describe('TikTokAdapter', () => {
     expect(adapter.platformName).toBe('tiktok');
   });
 
-  test('declares the tiktok domains it should parse in the browser', () => {
+    test('declares the tiktok domains it should parse in the browser', () => {
     const adapter = new TikTokAdapter();
     expect(adapter.hostPermissions).toEqual(TIKTOK_MATCHES);
     expect(adapter.hostPermissions).toContain('https://www.tiktok.com/*');
+  });
+
+  test('exposes a comment textarea selector for draft review', () => {
+    expect(TikTokAdapter.commentTextareaSelector).toBeTruthy();
+    expect(typeof TikTokAdapter.commentTextareaSelector).toBe('string');
+    const adapter = new TikTokAdapter();
+    expect(adapter.commentTextareaSelector).toBe(TikTokAdapter.commentTextareaSelector);
   });
 
   test('extractComments parses comment text, author and element refs from the DOM', () => {

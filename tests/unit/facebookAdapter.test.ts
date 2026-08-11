@@ -68,10 +68,17 @@ describe('FacebookAdapter', () => {
     expect(adapter.platformName).toBe('facebook');
   });
 
-  test('declares the facebook domains it should parse in the browser', () => {
+    test('declares the facebook domains it should parse in the browser', () => {
     const adapter = new FacebookAdapter();
     expect(adapter.hostPermissions).toEqual(FACEBOOK_MATCHES);
     expect(adapter.hostPermissions).toContain('https://www.facebook.com/*');
+  });
+
+  test('exposes a comment textarea selector for draft review', () => {
+    expect(FacebookAdapter.commentTextareaSelector).toBeTruthy();
+    expect(typeof FacebookAdapter.commentTextareaSelector).toBe('string');
+    const adapter = new FacebookAdapter();
+    expect(adapter.commentTextareaSelector).toBe(FacebookAdapter.commentTextareaSelector);
   });
 
   test('extractComments parses comment text, author and element refs from the DOM', () => {

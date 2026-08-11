@@ -70,10 +70,17 @@ describe('YouTubeAdapter', () => {
     expect(adapter.platformName).toBe('youtube');
   });
 
-  test('declares the youtube domains it should parse in the browser', () => {
+    test('declares the youtube domains it should parse in the browser', () => {
     const adapter = new YouTubeAdapter();
     expect(adapter.hostPermissions).toEqual(YOUTUBE_MATCHES);
     expect(adapter.hostPermissions).toContain('https://www.youtube.com/*');
+  });
+
+  test('exposes a comment textarea selector for draft review', () => {
+    expect(YouTubeAdapter.commentTextareaSelector).toBeTruthy();
+    expect(typeof YouTubeAdapter.commentTextareaSelector).toBe('string');
+    const adapter = new YouTubeAdapter();
+    expect(adapter.commentTextareaSelector).toBe(YouTubeAdapter.commentTextareaSelector);
   });
 
   test('extractComments parses comment text, author and element refs from the DOM', () => {

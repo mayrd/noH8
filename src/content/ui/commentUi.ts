@@ -16,6 +16,10 @@ import {
 
 export interface UiElement {
   textContent: string | null;
+  /** For <textarea> elements — the current input value. Optional so the same
+   * interface also works for contenteditable elements that expose text via
+   * `textContent`. */
+  value?: string | null;
   appendChild?(node: UiElement): void;
   setAttribute?(name: string, value: string): void;
   addEventListener?(type: string, listener: (event?: unknown) => void): void;
@@ -55,6 +59,26 @@ export interface ModalOptions {
   comment: CommentData;
   analysis: CommentAnalysis;
   windowRef?: UiWindow;
+}
+
+export interface DraftReviewOptions {
+  /** The textarea (or contenteditable) element the user is composing in. */
+  textarea: UiElement;
+  /** Platform name — used for the report flow and draft id generation. */
+  platform: string;
+  doc: UiDocument;
+  windowRef?: UiWindow;
+  /**
+   * Author label shown in the modal header. Defaults to "You" since the user
+   * is reviewing their *own* draft.
+   */
+  author?: string;
+  /**
+   * Analyze the current draft text. Receives a `{ id, text }` payload and
+   * must resolve with the on-device analysis to show in the modal. Typically
+   * the content-script `inferComment` helper.
+   */
+  analyze: (draft: Pick<CommentData, 'id' | 'text'>) => Promise<CommentAnalysis>;
 }
 
 /**
@@ -359,8 +383,79 @@ export function renderCommentControls(options: CommentControlsOptions): void {
       anchorParent.insertBefore(button, heart?.nextSibling ?? null);
       return;
     }
-  }
+    }
 
   // Default: append to the comment container.
   container.appendChild?.(button);
+}
+
+/**
+ * Append a rainbow "review draft" button next to a comment-composer textarea
+ * (or contenteditable element). Clicking it reads the current draft text, runs
+ * it through the on-device analyser, and opens the same analysis modal used for
+ * existing comments so the user can review their draft before posting.
+ *
+ * Repeated calls on the same textarea are a no-op so the button is only ever
+ * rendered once.
+ */
+export function renderDraftReviewButton(options: DraftReviewOptions): void {
+  const { textarea, platform, doc, windowRef, author = 'You', analyze } = options;
+
+  // Idempotency: skip if this textarea was already decorated.
+  if (textarea.dataset?.['noh8DraftButton'] === 'true') return;
+  if (textarea.setAttribute) textarea.setAttribute('data-noh8-draft', 'true');
+  if (textarea.dataset) textarea.dataset['noh8DraftButton'] = 'true';
+
+  const button = doc.createElement('button');
+  button.setAttribute?.('data-noh8-draft-rainbow', 'true');
+  button.setAttribute?.('type', 'button');
+  button.setAttribute?.(
+    'aria-label',
+    `Review this comment draft with NoH8 (${author})`
+  );
+  if (button.dataset) button.dataset['noh8DraftRainbow'] = 'true';
+  button.textContent = '🌈';
+
+  styles(button, {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '28px',
+    height: '28px',
+    margin: '2px 0 2px 6px',
+    padding: '0',
+    border: 'none',
+    borderRadius: '50%',
+    cursor: 'pointer',
+    fontSize: '16px',
+    background: `linear-gradient(135deg, ${RAINBOW_GRADIENT})`,
+    boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+    verticalAlign: 'middle',
+  });
+
+  // Place the rainbow button immediately after the textarea (as a sibling).
+  const parent = textarea.parentNode;
+  if (parent && typeof parent.insertBefore === 'function') {
+    parent.insertBefore(button, textarea.nextSibling ?? null);
+  } else if (typeof textarea.appendChild === 'function') {
+    // No parent to insert into — nest inside the textarea element.
+    textarea.appendChild(button);
+  }
+
+  button.addEventListener?.('click', async () => {
+    // Read the current draft text: real <textarea> uses `.value`, while
+    // contenteditable elements expose their content via `.textContent`.
+    const text = (textarea.value ?? textarea.textContent ?? '').trim();
+    const draftId = `draft-${platform}`;
+    const analysis = await analyze({ id: draftId, text });
+
+    const comment: CommentData = {
+      id: draftId,
+      platform: platform as CommentData['platform'],
+      author,
+      text,
+    };
+
+    openAnalysisModal({ doc, comment, analysis, windowRef });
+  });
 }

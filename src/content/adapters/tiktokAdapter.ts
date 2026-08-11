@@ -58,6 +58,14 @@ const COMMENT_TEXT_SELECTOR = 'span[data-e2e="comment-text"], span[data-e2e="com
 const AUTHOR_SELECTOR =
   'a[data-e2e="comment-username"], span[data-e2e="comment-author-username"], a[href^="/@"]';
 
+/**
+ * Selector for the textarea / contenteditable element where the user composes
+ * a new comment. TikTok's comment composer uses a `textarea` tagged with
+ * `data-e2e` markers related to comments.
+ */
+const COMMENT_TEXTAREA_SELECTOR =
+  'textarea[data-e2e*="comment"], div[data-e2e*="comment"] textarea';
+
 interface TikTokAdapterOptions {
   root?: RootLike | null;
   document?: DocumentLike | null;
@@ -74,6 +82,10 @@ export default class TikTokAdapter extends BaseAdapter {
   static readonly authorSelector = AUTHOR_SELECTOR;
 
   platformName = 'tiktok' as const;
+
+  /** Selector identifying the comment composer textarea(s). */
+  static readonly commentTextareaSelector = COMMENT_TEXTAREA_SELECTOR;
+  commentTextareaSelector = TikTokAdapter.commentTextareaSelector;
 
   /** Domains/pages this adapter parses when opened in the browser. */
   hostPermissions: string[] = getMatchesForPlatform(this.platformName);

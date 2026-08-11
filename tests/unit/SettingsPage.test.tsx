@@ -7,9 +7,16 @@ import { describe, test, expect, vi, beforeEach } from 'vitest';
 const enabledPlatforms = { youtube: true, instagram: false, facebook: true, tiktok: true };
 const setEnabledPlatform = vi.fn();
 const resetToDefaults = vi.fn();
+const setReviewOwnCommentDrafts = vi.fn();
 
 vi.mock('../../src/settings/settingsStore', () => ({
-  useSettingsStore: () => ({ enabledPlatforms, setEnabledPlatform, resetToDefaults }),
+  useSettingsStore: () => ({
+    enabledPlatforms,
+    setEnabledPlatform,
+    resetToDefaults,
+    reviewOwnCommentDrafts: true,
+    setReviewOwnCommentDrafts,
+  }),
 }));
 
 vi.mock('../../src/settings/modelStore', () => ({
@@ -106,11 +113,25 @@ describe('SettingsPage', () => {
     expect(resetToDefaults).not.toHaveBeenCalled();
   });
 
-  test('renders a card-based platform list (not a bare flat list)', () => {
+    test('renders a card-based platform list (not a bare flat list)', () => {
     render(<SettingsPage />);
     const platformSection = screen.getByTestId('platforms-section');
     const cards = within(platformSection).getAllByRole('checkbox');
     expect(cards.length).toBe(4);
+  });
+
+  test('renders a toggle for reviewing own comment drafts defaulting to on', () => {
+    render(<SettingsPage />);
+    const toggle = screen.getByLabelText(/review own comment drafts/i);
+    expect(toggle).toBeInTheDocument();
+    expect(toggle).toBeChecked();
+  });
+
+  test('toggling the draft review switch calls setReviewOwnCommentDrafts', async () => {
+    const user = userEvent.setup();
+    render(<SettingsPage />);
+    await user.click(screen.getByLabelText(/review own comment drafts/i));
+    expect(setReviewOwnCommentDrafts).toHaveBeenCalledWith(false);
   });
 });
 

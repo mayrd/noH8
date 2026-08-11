@@ -54,6 +54,15 @@ const COMMENT_TEXT_SELECTOR = '#content-text';
 /** Selector used to grab the author handle from a comment container. */
 const AUTHOR_SELECTOR = '#author-text';
 
+/**
+ * Selector for the textarea / contenteditable element where the user composes
+ * a new comment reply. YouTube's `ytd-commentbox` renders the composer as an
+ * emoji-picker-wrapped editor that may be either a real <textarea> or a
+ * contenteditable element.
+ */
+const COMMENT_TEXTAREA_SELECTOR =
+  'ytd-commentbox textarea, ytd-commentbox [contenteditable="true"][role="textbox"]';
+
 interface YouTubeAdapterOptions {
   root?: RootLike | null;
   document?: DocumentLike | null;
@@ -69,10 +78,14 @@ export default class YouTubeAdapter extends BaseAdapter {
   static readonly commentTextSelector = COMMENT_TEXT_SELECTOR;
   static readonly authorSelector = AUTHOR_SELECTOR;
 
-  platformName = 'youtube' as const;
+    platformName = 'youtube' as const;
 
   /** Domains/pages this adapter parses when opened in the browser. */
   hostPermissions: string[] = getMatchesForPlatform(this.platformName);
+
+  /** Selector identifying the comment composer textarea(s). */
+  static readonly commentTextareaSelector = COMMENT_TEXTAREA_SELECTOR;
+  commentTextareaSelector = YouTubeAdapter.commentTextareaSelector;
 
   private readonly root: RootLike | null;
   private readonly documentRef: DocumentLike | null;
