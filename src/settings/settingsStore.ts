@@ -44,7 +44,7 @@ const createSettingsStore = () => {
         persist({ enabledPlatforms, reviewOwnCommentDrafts });
       },
       setReviewOwnCommentDrafts: (enabled: boolean) => {
-        set({ reviewOwnCommentDrafts: enabled });
+        set((state) => { state.reviewOwnCommentDrafts = enabled; });
         const { enabledPlatforms, reviewOwnCommentDrafts } = get();
         persist({ enabledPlatforms, reviewOwnCommentDrafts });
       },

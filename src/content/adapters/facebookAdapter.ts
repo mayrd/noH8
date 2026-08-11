@@ -51,6 +51,7 @@ const COMMENT_SECONDARY_SELECTORS = ['div[role="article"] ul div[dir]'];
 
 /** Selector used to grab the comment body text. */
 const COMMENT_TEXT_SELECTOR = 'div[dir="auto"]';
+const COMMENT_TEXTAREA_SELECTOR = 'div[role="comment"] textarea';
 
 /** Selector used to grab the author handle from a comment container. */
 const AUTHOR_SELECTOR = 'a[role="link"], h4, a[href*="="]';
