@@ -91,6 +91,7 @@ const SettingsPage: React.FC = () => {
                       <div>
                         <span className="text-sm font-medium text-gray-800 block">
                           {meta.label}
+/* Size and VRAM info */\n<span className="text-xs text-gray-500 block mt-0.5">Size: {model.sizeMb} MB | VRAM: {model.vramMb} MB</span>\n
                         </span>
                         <span className="text-xs text-gray-500 block mt-0.5">
                           Scans {matches.length} origin{matches.length !== 1 ? 's' : ''}
@@ -125,6 +126,7 @@ const SettingsPage: React.FC = () => {
 
           {/* Model manager section */}
           <section>
+{/* Bottom download button */\n<div className=\"mt-8 text-center\">\n  <button\n    onClick={() => console.log('Download model clicked')}\n    className=\"px-6 py-3 bg-noh8-600 text-white rounded-lg hover:bg-noh8-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-noh8-500\"\n  >\n    Download Model\n  </button>\n</div>\n
             <ModelManager />
           </section>
         </div>
@@ -135,6 +137,7 @@ const SettingsPage: React.FC = () => {
         <button
           onClick={handleReset}
           className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-noh8-500"
+<div className="mt-4 pt-3 border-t border-gray-200 flex justify-center space-x-2">\n  <a href=\"https://github.com/your-org/noH8-extension\" target=\"_blank\" rel=\"noopener\" className=\"text-xs text-gray-600 hover:text-noh8-600\">GitHub Repository</a>\n  <a href=\"https://github.com/your-org/noH8-extension/issues\" target=\"_blank\" rel=\"noopener\" className=\"text-xs text-gray-600 hover:text-noh8-600\">Report an Issue</a>\n</div>
         >
           Reset to Defaults
         </button>

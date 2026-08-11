@@ -22,6 +22,11 @@ const MESSAGE_TYPES = new Set<NoH8MessageType>([
 chrome.runtime.onInstalled.addListener((details) => {
   console.info(`[NoH8] installed (reason: ${details.reason}) running setup`);
   void runExtensionSetup();
+
+  // Open the settings page in a new tab
+  chrome.tabs.create({
+    url: chrome.runtime.getURL('settings.html')
+  });
 });
 
 chrome.runtime.onStartup.addListener(() => {

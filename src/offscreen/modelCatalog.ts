@@ -35,6 +35,7 @@ export interface ModelDescriptor {
   positiveLabel?: string;
   /** Model output label associated with negative sentiment (polarity models). */
   negativeLabel?: string;
+/** Approximate download size in megabytes. */\n   sizeMb: number;\n   /** Estimated VRAM consumption in megabytes. */\n   vramMb: number;\n
 }
 
 export const MODEL_CATALOG: ModelDescriptor[] = [

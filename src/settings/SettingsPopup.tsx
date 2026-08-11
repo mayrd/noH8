@@ -51,6 +51,7 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ onOpenSettings }) => {
         <p className="text-xs text-gray-400 text-center">
           Privacy-first hate speech detection
         </p>
+<div className="mt-4 pt-3 border-t border-gray-100 flex justify-center space-x-2">\n  <a href=\"https://github.com/your-org/noH8-extension\" target=\"_blank\" rel=\"noopener\" className=\"text-xs text-gray-600 hover:text-noh8-600\">GitHub Repository</a>\n  <a href=\"https://github.com/your-org/noH8-extension/issues\" target=\"_blank\" rel=\"noopener\" className=\"text-xs text-gray-600 hover:text-noh8-600\">Report an Issue</a>\n</div>
       </div>
     </div>
   );
