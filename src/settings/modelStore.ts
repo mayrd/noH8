@@ -20,6 +20,8 @@ export interface ModelStorageState {
   selectedModelId: string;
   downloadedModels: string[];
   modelStatus: Record<string, ModelStatusId>;
+  /** Per-model download progress as a percentage (0–100), shown in the settings UI. */
+  downloadProgress: Record<string, number>;
 }
 
 export interface ModelStore extends ModelStorageState {
@@ -27,12 +29,14 @@ export interface ModelStore extends ModelStorageState {
   markModelDownloaded: (id: string) => void;
   unmarkModelDownloaded: (id: string) => void;
   setModelStatus: (id: string, status: ModelStatusId) => void;
+  setDownloadProgress: (id: string, percent: number) => void;
 }
 
 export const DEFAULT_MODEL_STORAGE: ModelStorageState = {
   selectedModelId: DEFAULT_MODEL_ID,
   downloadedModels: [],
   modelStatus: {},
+  downloadProgress: {},
 };
 
 function readStorage(): Promise<ModelStorageState | undefined> {
@@ -54,6 +58,7 @@ function writeStorage(next: ModelStore): void {
     selectedModelId: next.selectedModelId,
     downloadedModels: next.downloadedModels,
     modelStatus: next.modelStatus,
+    downloadProgress: next.downloadProgress,
   };
   chrome.storage.local.set({ [STORAGE_KEY]: snapshot }, () => {});
 }
@@ -81,6 +86,10 @@ export const createModelStore = () =>
         set({ modelStatus: { ...get().modelStatus, [id]: status } });
         writeStorage(get());
       },
+      setDownloadProgress: (id, percent) => {
+        set({ downloadProgress: { ...get().downloadProgress, [id]: percent } });
+        writeStorage(get());
+      },
     }))
   );
 
@@ -97,6 +106,7 @@ export async function initModelStore(): Promise<void> {
       selectedModelId: persisted.selectedModelId ?? DEFAULT_MODEL_ID,
       downloadedModels: persisted.downloadedModels ?? [],
       modelStatus: persisted.modelStatus ?? {},
+      downloadProgress: persisted.downloadProgress ?? {},
     });
   }
   if (typeof chrome !== 'undefined' && chrome.storage?.onChanged) {
@@ -109,6 +119,7 @@ export async function initModelStore(): Promise<void> {
         selectedModelId: next.selectedModelId ?? modelStore.getState().selectedModelId,
         downloadedModels: next.downloadedModels ?? modelStore.getState().downloadedModels,
         modelStatus: next.modelStatus ?? modelStore.getState().modelStatus,
+        downloadProgress: next.downloadProgress ?? modelStore.getState().downloadProgress,
       });
     });
   }

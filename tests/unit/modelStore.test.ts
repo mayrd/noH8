@@ -32,6 +32,13 @@ import { DEFAULT_MODEL_ID } from '../../src/offscreen/modelCatalog';
 describe('ModelStore', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reset the shared singleton so tests are independent of execution order.
+    modelStore.setState({
+      selectedModelId: DEFAULT_MODEL_ID,
+      downloadedModels: [],
+      modelStatus: {},
+      downloadProgress: {},
+    });
     localGet.mockImplementation(
       (key, cb) => cb({ [STORAGE_KEY]: { selectedModelId: DEFAULT_MODEL_ID } })
     );
@@ -53,11 +60,46 @@ describe('ModelStore', () => {
           selectedModelId: 'sst-2-english',
           downloadedModels: [],
           modelStatus: {},
+          downloadProgress: {},
         },
       },
       expect.any(Function)
     );
   });
+
+  test('setting download progress records and persists it', () => {
+    const state = modelStore.getState();
+    state.setDownloadProgress('toxic-bert', 64);
+    expect(modelStore.getState().downloadProgress['toxic-bert']).toBe(64);
+    expect(localSet).toHaveBeenCalledWith(
+      {
+        [STORAGE_KEY]: {
+          selectedModelId: DEFAULT_MODEL_ID,
+          downloadedModels: [],
+          modelStatus: {},
+          downloadProgress: { 'toxic-bert': 64 },
+        },
+      },
+      expect.any(Function)
+    );
+  });
+
+  test('keeps download progress in sync from storage changes', async () => {
+    await initModelStore(); // registers the storage.onChanged listener
+    fireStorageChanged({
+      [STORAGE_KEY]: {
+        newValue: {
+          selectedModelId: DEFAULT_MODEL_ID,
+          downloadedModels: [],
+          modelStatus: { 'toxic-bert': 'downloading' },
+          downloadProgress: { 'toxic-bert': 80 },
+        },
+      },
+    } as any);
+    const state = modelStore.getState();
+    expect(state.downloadProgress['toxic-bert']).toBe(80);
+  });
+
 
   test('marking a model downloaded records and persists it', () => {
     const state = modelStore.getState();

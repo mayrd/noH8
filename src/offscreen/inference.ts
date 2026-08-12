@@ -44,21 +44,47 @@ env.backends.onnx.wasm.proxy = false;
 
 /**
  * Download (and prime) a model. Updates the shared model status in storage so
- * the settings UI can reflect progress.
+ * the settings UI can reflect progress, streams per-file percentage progress
+ * back through the store, and logs progress to the console for diagnostics.
  */
 export async function downloadModel(modelId: string): Promise<void> {
   const descriptor = findModelDescriptor(modelId);
   if (!descriptor) throw new Error(`Unknown model: ${modelId}`);
 
+  console.info(`[NoH8] Downloading model "${modelId}" (${descriptor.modelId})…`);
   modelStore.getState().setModelStatus(modelId, 'downloading');
+  modelStore.getState().setDownloadProgress(modelId, 0);
   try {
-    await getPipeline(descriptor);
+    await getPipeline(descriptor, createProgressReporter(modelId));
+    modelStore.getState().setDownloadProgress(modelId, 100);
     modelStore.getState().markModelDownloaded(modelId);
     modelStore.getState().setModelStatus(modelId, 'ready');
+    console.info(`[NoH8] Model "${modelId}" downloaded and ready.`);
   } catch (error) {
     modelStore.getState().setModelStatus(modelId, 'error');
+    console.error(`[NoH8] Failed to download model "${modelId}":`, error);
     throw error;
   }
+}
+
+/**
+ * Build a Transformers.js `progress_callback` that forwards throttled whole-percent
+ * download progress to the shared model store (in turns persisted to
+ * `chrome.storage.local`, so the settings UI updates live) and to the console.
+ * Non-progress lifecycle events (initiate / download / done) are ignored.
+ */
+function createProgressReporter(
+  modelId: string
+): (event: { status?: string; progress?: number }) => void {
+  let lastPercent = -1;
+  return (event) => {
+    if (event.status !== 'progress' || typeof event.progress !== 'number') return;
+    const percent = Math.max(0, Math.min(100, Math.round(event.progress)));
+    if (percent === lastPercent) return; // throttle storage writes to per-percent
+    lastPercent = percent;
+    console.debug(`[NoH8] Model "${modelId}" download progress: ${percent}%`);
+    modelStore.getState().setDownloadProgress(modelId, percent);
+  };
 }
 
 /** Best-effort removal of the model's files from the Cache Storage API. */
@@ -126,10 +152,15 @@ export async function handleOffscreenRequest(
 /** Singleton pipelines keyed by catalog model id. */
 const PIPELINES = new Map<string, unknown>();
 
-async function getPipeline(descriptor: ModelDescriptor): Promise<unknown> {
+async function getPipeline(
+  descriptor: ModelDescriptor,
+  onProgress?: (event: { status?: string; progress?: number }) => void
+): Promise<unknown> {
   const existing = PIPELINES.get(descriptor.id);
   if (existing) return existing;
-  const instance = await pipeline(descriptor.task, descriptor.modelId);
+  const instance = await pipeline(descriptor.task, descriptor.modelId, {
+    ...(onProgress ? { progress_callback: onProgress } : {}),
+  });
   PIPELINES.set(descriptor.id, instance);
   return instance;
 }

@@ -72,6 +72,7 @@ export async function seedModelSettings(): Promise<void> {
     selectedModelId: DEFAULT_MODEL_STORAGE.selectedModelId,
     downloadedModels: [],
     modelStatus: {},
+    downloadProgress: {},
   };
   await new Promise<void>((resolve) => {
     chrome.storage.local.set({ [STORAGE_KEY]: defaults }, () => resolve());

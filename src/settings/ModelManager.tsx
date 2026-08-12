@@ -24,9 +24,15 @@ function statusFor(
  * catalog of suitable Transformers.js models.
  */
 const ModelManager: React.FC = () => {
-  const { selectedModelId, downloadedModels, modelStatus, setSelectedModel } = useModelStore();
+  const { selectedModelId, downloadedModels, modelStatus, downloadProgress, setSelectedModel } =
+    useModelStore();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{
+    modelId: string;
+    kind: 'success' | 'error';
+    text: string;
+  } | null>(null);
 
   const run = async (
     action: 'download' | 'refresh' | 'delete',
@@ -34,12 +40,22 @@ const ModelManager: React.FC = () => {
   ) => {
     setBusyId(model.id);
     setActionError(null);
+    setNotice(null);
     try {
       await requestModelCommand(action, model.id);
+      if (action === 'download') {
+        setNotice({
+          modelId: model.id,
+          kind: 'success',
+          text: `${model.name} downloaded successfully and is ready on-device.`,
+        });
+      }
     } catch (error) {
-      setActionError(
-        `Could not ${action} "${model.name}": ${String((error as Error)?.message ?? error)}`
-      );
+      const message = `Could not ${action} "${model.name}": ${String(
+        (error as Error)?.message ?? error
+      )}`;
+      setActionError(message);
+      setNotice({ modelId: model.id, kind: 'error', text: message });
     } finally {
       setBusyId(null);
     }
@@ -103,6 +119,37 @@ const ModelManager: React.FC = () => {
                   {statusMeta.label}
                 </span>
               </div>
+
+              {/* Download progress */}
+              {status === 'downloading' && (
+                <div className="mt-4" data-testid={`progress-${model.id}`}>
+                  <div className="flex justify-between text-xs text-gray-500 mb-1">
+                    <span>Downloading from Hugging Face…</span>
+                    <span>{downloadProgress[model.id] ?? 0}%</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-noh8-600 transition-all duration-200"
+                      style={{ width: `${downloadProgress[model.id] ?? 0}%` }}
+                      data-testid={`progress-bar-${model.id}`}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Success / error feedback for the last action */}
+              {notice?.modelId === model.id && (
+                <p
+                  data-testid={`notice-${model.id}`}
+                  className={`mt-4 text-xs font-medium rounded-lg p-2.5 ${
+                    notice.kind === 'success'
+                      ? 'text-green-700 bg-green-50 border border-green-200'
+                      : 'text-red-700 bg-red-50 border border-red-200'
+                  }`}
+                >
+                  {notice.text}
+                </p>
+              )}
 
               {/* Action buttons */}
               <div className="mt-4 flex items-center justify-end gap-2 pt-3 border-t border-gray-100">

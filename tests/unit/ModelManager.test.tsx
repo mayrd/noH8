@@ -3,20 +3,22 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, test, expect, vi, beforeEach } from 'vitest';
 
-// Mock the model store with a controlled state.
+// Mock the model store with a controlled (mutatable) state so tests can drive
+// per-model status and download progress and re-render.
 const setSelectedModel = vi.fn();
+const storeState = {
+  selectedModelId: 'toxic-bert',
+  downloadedModels: ['toxic-bert'],
+  modelStatus: { 'sst-2-english': 'not_downloaded' },
+  downloadProgress: {} as Record<string, number>,
+  setSelectedModel,
+};
 vi.mock('../../src/settings/modelStore', () => ({
-  useModelStore: () => ({
-    selectedModelId: 'toxic-bert',
-    downloadedModels: ['toxic-bert'],
-    modelStatus: { 'sst-2-english': 'error' },
-    setSelectedModel,
-  }),
+  useModelStore: () => storeState,
 }));
 
-vi.mock('../../src/offscreen/client', () => ({
-  requestModelCommand: vi.fn(),
-}));
+const { requestModelCommand } = vi.hoisted(() => ({ requestModelCommand: vi.fn() }));
+vi.mock('../../src/offscreen/client', () => ({ requestModelCommand }));
 
 // Import the real catalog so we know which models should appear.
 import { MODEL_CATALOG } from '../../src/offscreen/modelCatalog';
@@ -27,6 +29,11 @@ const { default: ModelManager } = await import('../../src/settings/ModelManager'
 describe('ModelManager', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // Reset the shared mutable store to a known state.
+    storeState.selectedModelId = 'toxic-bert';
+    storeState.downloadedModels = ['toxic-bert'];
+    storeState.modelStatus = { 'sst-2-english': 'not_downloaded' };
+    storeState.downloadProgress = {};
   });
 
   test('renders every model from the catalog', () => {
@@ -85,5 +92,36 @@ describe('ModelManager', () => {
     const cards = screen.getAllByTestId(/^model-card-/);
     expect(cards.length).toBe(MODEL_CATALOG.length);
   });
-});
 
+  test('shows a progress bar with the current percent while downloading', () => {
+    storeState.modelStatus['sst-2-english'] = 'downloading';
+    storeState.downloadProgress['sst-2-english'] = 42;
+    render(<ModelManager />);
+    const card = screen.getByTestId('model-card-sst-2-english');
+    expect(within(card).getByTestId('progress-sst-2-english')).toBeInTheDocument();
+    expect(within(card).getByText('42%')).toBeInTheDocument();
+  });
+
+  test('shows a success message after a download completes', async () => {
+    requestModelCommand.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    render(<ModelManager />);
+    const card = screen.getByTestId('model-card-sst-2-english');
+    await user.click(within(card).getByRole('button', { name: /download/i }));
+    expect(requestModelCommand).toHaveBeenCalledWith('download', 'sst-2-english');
+    expect(await screen.findByTestId('notice-sst-2-english')).toHaveTextContent(
+      /downloaded successfully/i
+    );
+  });
+
+  test('shows an error message when a download fails', async () => {
+    requestModelCommand.mockRejectedValue(new Error('network timeout'));
+    const user = userEvent.setup();
+    render(<ModelManager />);
+    const card = screen.getByTestId('model-card-sst-2-english');
+    await user.click(within(card).getByRole('button', { name: /download/i }));
+    expect(await screen.findByTestId('notice-sst-2-english')).toHaveTextContent(
+      /could not download.*network timeout/i
+    );
+  });
+});
