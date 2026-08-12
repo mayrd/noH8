@@ -25,6 +25,23 @@ env.allowRemoteModels = true;
 env.allowLocalModels = false;
 env.useBrowserCache = true;
 
+// Never run onnxruntime-web through a proxy/threaded web worker.
+//
+// By default onnxruntime-web sets `numThreads = min(4, cores/2)`. When
+// `numThreads > 1` it loads the *threaded* WASM build and spawns an Emscripten
+// pthread worker. That worker boots by `importScripts()`ing its bundled main
+// script, which onnxruntime-web hands over as a blob: URL. The MV3
+// extension_pages CSP ("script-src 'self' 'wasm-unsafe-eval'") forbids loading
+// scripts from blob: sources, so the worker dies with a NetworkError and every
+// model download / inference fails inside the offscreen document.
+//
+// Forcing `numThreads = 1` makes onnxruntime-web pick the single-threaded WASM
+// build (no pthread worker, no blob script), which runs cleanly under CSP.
+// `proxy = false` additionally blocks the separate blob-backed proxy-worker
+// path, so nothing is ever loaded from a blob: URL.
+env.backends.onnx.wasm.numThreads = 1;
+env.backends.onnx.wasm.proxy = false;
+
 /**
  * Download (and prime) a model. Updates the shared model status in storage so
  * the settings UI can reflect progress.
