@@ -100,8 +100,7 @@ export default class YouTubeAdapter extends BaseAdapter {
     this.documentRef = options.document !== undefined ? options.document : hasDocument;
     const globalMO =
       typeof MutationObserver !== 'undefined' ? MutationObserver : NoopMutationObserver;
-    this.MutationObserverCtor =
-      options.MutationObserver !== undefined ? options.MutationObserver : globalMO;
+    this.MutationObserverCtor = options.MutationObserver ?? globalMO;
   }
 
   private queryAll(item: ElementLike | RootLike, selector: string): ElementLike[] {

@@ -92,6 +92,19 @@ function start(): void {
                 });
               }
 
+              if (
+                analysis.isHateSpeech &&
+                analysis.hateSpeechScore >= 0.85 &&
+                typeof adapter.injectWarning === 'function'
+              ) {
+                adapter.injectWarning(comment.id, {
+                  commentId: comment.id,
+                  isHateSpeech: true,
+                  score: analysis.hateSpeechScore,
+                  label: analysis.issues[0]?.label || 'Hate speech detected',
+                });
+              }
+
               renderCommentControls({
                 container: container as unknown as UiElement,
                 comment,

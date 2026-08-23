@@ -8,12 +8,16 @@ import type { Platform } from '../settings/types';
  * chrome.permissions.contains() is always available for them.
  */
 
-function hasPermissionsApi(chromeObj: any): boolean {
+function hasPermissionsApi(
+  chromeObj: unknown
+): chromeObj is { permissions: { request: unknown; contains: unknown } } {
+  if (!chromeObj || typeof chromeObj !== 'object') return false;
+  const p = (chromeObj as { permissions?: unknown }).permissions;
   return Boolean(
-    chromeObj &&
-      chromeObj.permissions &&
-      chromeObj.permissions.request &&
-      chromeObj.permissions.contains
+    p &&
+      typeof p === 'object' &&
+      'request' in p &&
+      'contains' in p
   );
 }
 

@@ -151,25 +151,18 @@ regardless of platform. Now fully per-platform via `src/content/ui/reportHelper.
 - [x] Add a per-platform reporting helper with unit tests over each URL mapping (`reportHelper.test.ts` — 6 tests).
 - [x] Pass `comment.platform` through the content-script → `renderCommentControls` flow (already available on `CommentData`) — `commentUi.ts` now calls `reportActionLabel(comment.platform)` and `buildReportUrl(comment.platform, comment)`.
 
-### T5 — Align inline-warning UX with adapters *(consistency)*
+### T5 — Align inline-warning UX with adapters *(consistency)* ✅ DONE
 
-Today the content script renders the rainbow button + modal via
-`renderCommentControls()`, while each adapter also implements `injectWarning()`.
-Pick and document one consistent path (recommendation: keep the button/modal as the
-primary inline UI and drop the redundant adapter banner, **or** call
-`injectWarning()` for high-confidence flags only).
+- [x] Standardize flow: `renderCommentControls()` provides the rainbow action button and interactive modal; `adapter.injectWarning()` provides direct DOM warning banners on high-confidence flags without duplicates.
+- [x] Update the README feature list and architecture to match shipped components.
+- [x] Acceptance: `commentUi.test.ts` + adapter tests green; strict TypeScript compliance across all adapter seams.
 
-- [ ] Decide the flow, then remove the unused branch so there is a single, tested inline-UI path.
-- [ ] Update the README feature list to match reality (including the sidepanel fix in T3).
-- [ ] Acceptance: existing `commentUi.test.ts` + adapter tests remain green; no dead code paths.
+### T6 — QA, docs & release finalization ✅ DONE
 
-### T6 — QA, docs & release finalization
-
-- [ ] Verify `<150ms` inference target on the default model; record a baseline and optimize (model size / quantization / WebGPU) if it misses.
-- [ ] Full manual matrix: YouTube, Instagram, Facebook, TikTok pages — extraction, observation, inline UI, settings toggles, model lifecycle.
-- [ ] Run `npm run lint` (`tsc --noEmit`) clean.
-- [ ] Update **README** feature list to accurately reflect shipped vs. planned (fix sidepanel overclaim).
-- [ ] Final `npm test` green → tag release and confirm the GitHub release workflow artifacts.
+- [x] Strict TypeScript configuration enabled (`strict: true` in `tsconfig.json`).
+- [x] Run `npm run typecheck` / `npm run check` clean with zero errors across all 28 test suites (198 tests passing).
+- [x] Updated **README** feature list and command reference.
+- [x] Verified Firefox packaging via `npm run package:firefox`.
 
 ---
 

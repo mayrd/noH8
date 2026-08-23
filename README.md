@@ -30,13 +30,13 @@ NoH8 uses `Transformers.js` with ONNX WebAssembly/WebGPU to analyze social media
 
 ## Features
 - ✅ 100% local ML inference — no servers, no API costs, no data leaks
-- ✅ Real on-device model via Transformers.js (WebAssembly/WebGPU)
-- ✅ Model Manager in Settings — download, refresh, delete, or switch between suitable models
+- ✅ Real on-device model via Transformers.js (WebAssembly/WebGPU) in an offscreen document
+- ✅ Model Manager in Settings — download, refresh, delete, or switch models (Toxic-BERT, RoBERTa, SST-2, Multilingual)
 - ✅ Graceful fallback to a built-in heuristic analyser while a model is downloading
 - ✅ Multi-platform support: YouTube, Instagram, Facebook, TikTok
-- ✅ Chrome Manifest v3 extension
-- ✅ Sidepanel dashboard for batch review
-- ✅ Inline DOM highlighting of flagged comments
+- ✅ Sidepanel dashboard for live comment aggregation, issue filtering, and "Jump to comment"
+- ✅ Per-comment rainbow action buttons, detailed sentiment/issue modals, and draft review
+- ✅ Chrome Manifest v3 extension with Firefox build path
 
 ## On-device inference & model management
 NoH8 runs a `text-classification` model inside an **offscreen document** so the
@@ -56,16 +56,19 @@ back to a fast, deterministic keyword heuristic so every comment is still
 scored.
 
 ## Tech Stack
-- React 18 + TypeScript + Vite (CRXJS)
+- React 18 + Zustand + TypeScript (Strict Mode) + Vite (CRXJS)
 - Tailwind CSS
 - Transformers.js (ONNX runtime via WebAssembly/WebGPU)
-- Chrome Extension Manifest v3
+- Chrome Extension Manifest v3 + Firefox MV3
 
-## Quick Start
+## Commands
 ```bash
-npm install
-npm run dev    # Development mode with HMR
-npm run build  # Production build in dist/
+npm install               # Install dependencies
+npm run dev               # Development mode with HMR
+npm run build             # Production build in dist/
+npm run check             # Unified check: typecheck + test + build
+npm test                  # Run full Vitest suite
+npm run package:firefox   # Package Firefox build in dist-firefox/
 ```
 
 ## Implementation Plan
