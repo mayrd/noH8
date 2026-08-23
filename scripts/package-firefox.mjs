@@ -30,6 +30,18 @@ export function buildFirefoxManifest(chromeManifest) {
     manifest.background = { scripts: [manifest.background.service_worker] };
   }
 
+  if (manifest.side_panel) {
+    manifest.sidebar_action = {
+      default_panel: manifest.side_panel.default_path || 'sidepanel.html',
+      default_title: 'NoH8 Dashboard',
+    };
+    delete manifest.side_panel;
+  }
+
+  if (Array.isArray(manifest.permissions)) {
+    manifest.permissions = manifest.permissions.filter((p) => p !== 'sidePanel');
+  }
+
   return manifest;
 }
 

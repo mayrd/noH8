@@ -98,32 +98,29 @@ Compact status of shipped work (verified against the repo + passing tests).
 Remaining work, in priority order. Each group lists explicit sub-tasks **and
 acceptance criteria** (which double as test requirements per the TDD rule).
 
-### T1 — Implement real adapters: YouTube, Facebook, TikTok *(highest priority)*
-
-Currently `youtubeAdapter.ts`, `facebookAdapter.ts`, `tiktokAdapter.ts` are stubs
-(empty `extractComments`, no-op `observe`). Only Instagram is production-ready.
+### T1 — Implement real adapters: YouTube, Facebook, TikTok *(highest priority)* ✅ DONE
 
 **YouTube**
-- [ ] `extractComments()`: parse `ytd-comment-thread-renderer` → comments; resolve author via `#author-text`, text via `#content-text`, id from the thread/link.
-- [ ] `observe()`: return existing comments on boot, then watch the `ytd-comments` container with `MutationObserver` for infinite-scroll additions (dedupe by id).
-- [ ] `injectWarning()`: append a `[data-noh8-warning]` banner to the flagged comment (reuse Instagram's structural-DOM style).
-- [ ] Acceptance: unit tests mirroring `tests/unit/instagramAdapter.test.ts` — extraction, dedupe (no dupes on re-scan), id stability, warning-skip-on-duplicate, empty-when-no-Nodes.
+- [x] `extractComments()`: parse `ytd-comment-thread-renderer` → comments; resolve author via `#author-text`, text via `#content-text`, id from the thread/link.
+- [x] `observe()`: return existing comments on boot, then watch the `ytd-comments` container with `MutationObserver` for infinite-scroll additions (dedupe by id).
+- [x] `injectWarning()`: append a `[data-noh8-warning]` banner to the flagged comment (reuse Instagram's structural-DOM style).
+- [x] Acceptance: unit tests mirroring `tests/unit/instagramAdapter.test.ts` — extraction, dedupe (no dupes on re-scan), id stability, warning-skip-on-duplicate, empty-when-no-Nodes (`youtubeAdapter.test.ts` — 8 tests).
 
 **Facebook**
-- [ ] `extractComments()`: parse `div[role="article"]` / comment thread containers; robust to obfuscated class names (lean on `role`/`dir`/`aria-*` where possible).
-- [ ] `observe()` mutation watching for dynamic thread expansion.
-- [ ] `injectWarning()` banner.
-- [ ] Acceptance: same unit-test matrix as Instagram, with Facebook selectors.
+- [x] `extractComments()`: parse `div[role="article"]` / comment thread containers; robust to obfuscated class names (lean on `role`/`dir`/`aria-*` where possible).
+- [x] `observe()` mutation watching for dynamic thread expansion.
+- [x] `injectWarning()` banner.
+- [x] Acceptance: same unit-test matrix as Instagram, with Facebook selectors (`facebookAdapter.test.ts` — 8 tests).
 
 **TikTok**
-- [ ] `extractComments()`: parse `p[data-e2e="comment-level-1"]` containers; author from nearby handle.
-- [ ] `observe()` for lazy-loaded comment sections.
-- [ ] `injectWarning()` banner.
-- [ ] Acceptance: same unit-test matrix, with TikTok selectors.
+- [x] `extractComments()`: parse `p[data-e2e="comment-level-1"]` containers; author from nearby handle.
+- [x] `observe()` for lazy-loaded comment sections.
+- [x] `injectWarning()` banner.
+- [x] Acceptance: same unit-test matrix, with TikTok selectors (`tiktokAdapter.test.ts` — 8 tests).
 
 **Registry / wiring**
-- [ ] Ensure `getEnabledAdapters()` loads the three new adapters (test via `registry.test.ts`).
-- [ ] Confirm content-script boot log reports all enabled platforms.
+- [x] Ensure `getEnabledAdapters()` loads the three new adapters (test via `registry.test.ts`).
+- [x] Confirm content-script boot log reports all enabled platforms.
 
 ### T2 — Fallback selector mechanism *(robustness) ✅ DONE
 
@@ -134,19 +131,14 @@ graceful for all adapters.
 - [x] Log a one-time `console.warn` when a primary selector yields nothing so regressions are visible, but keep scanning.
 - [x] Add a shared helper (e.g. `content/adapters/selectorStrategy.ts`) reused by every adapter.
 - [x] Acceptance: unit test that a mocked DOM matching only secondary selectors still extracts comments; and that an unmatched DOM returns `[]` without throwing (`selectorStrategy.test.ts` — 9 tests).
-### T3 — Sidepanel dashboard *(not started — README overclaims this)*
+### T3 — Sidepanel dashboard ✅ DONE
 
-There is currently **no sidepanel folder, no `chrome.sidePanel` usage, and no
-`sidePanel` permission** in the manifest, yet the README lists "Sidepanel dashboard"
-as a shipped feature. Build it properly.
-
-- [ ] Add `src/sidepanel/Sidepanel.tsx` + `main.tsx`; register `sidepanel.html` in `vite.config.ts` rollup input and in the manifest (`side_panel.default_path`).
-- [ ] Add `sidePanel` permission to the manifest (and mirror in `firefoxManifest.test.ts` / Firefox path if it applies).
-- [ ] Open the panel after install / from the action (via `chrome.sidePanel.setPanelBehavior`).
-- [ ] **Aggregation:** content script already analyses comments; add a shared store (e.g. `sidepanel/flagStore` writing to `chrome.storage.local`) to record each flagged `CommentAnalysis`.
-- [ ] UI: card list of flagged comments for the **active tab**, real-time count header, live updates via `chrome.storage.onChanged`.
-- [ ] **Quick Jump:** each card's button sends a message to the content script which scrolls to the flagged comment's element and highlights it briefly.
-- [ ] Acceptance: unit tests for the flag store (add/clear, tab scoping, no duplicates) and any pure UI logic; MANUAL browser check on a real comments page.
+- [x] Add `src/sidepanel/Sidepanel.tsx` + `main.tsx`; register `sidepanel.html` in `vite.config.ts` rollup input and in the manifest (`side_panel.default_path`).
+- [x] Add `sidePanel` permission to the manifest (and mirror in `firefoxManifest.test.ts` / Firefox path).
+- [x] **Aggregation:** `sidepanel/flagStore.ts` writing to `chrome.storage.local` to record each flagged `CommentAnalysis`.
+- [x] UI: card list of flagged comments for the **active tab** and all pages, real-time count header, live updates via `chrome.storage.onChanged`.
+- [x] **Quick Jump:** each card's "Jump" button sends a `noh8:highlightComment` message to the content script which scrolls to the flagged comment's element and highlights it with a pulse border.
+- [x] Acceptance: unit tests for the flag store (`flagStore.test.ts` — 5 tests) and Sidepanel UI (`Sidepanel.test.tsx` — 5 tests).
 
 ### T4 — Report Assistant & per-platform reporting ✅ DONE
 

@@ -5,8 +5,33 @@ import { renderCommentControls } from './ui/commentUi';
 import { renderDraftReviewButton } from './ui/commentUi';
 import type { UiDocument, UiElement, UiWindow } from './ui/commentUi';
 import type { Platform } from '../settings/types';
+import { MSG } from '../shared/messages';
+import { recordFlaggedComment } from '../sidepanel/flagStore';
 
 const PLATFORMS: Platform[] = ['youtube', 'instagram', 'facebook', 'tiktok'];
+const commentElementMap = new Map<string, HTMLElement>();
+
+/**
+ * Highlight and scroll to a comment element when requested by the sidepanel.
+ */
+export function highlightComment(commentId: string): boolean {
+  const el = commentElementMap.get(commentId);
+  if (!el || typeof el.scrollIntoView !== 'function') return false;
+
+  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  const prevOutline = el.style.outline;
+  const prevTransition = el.style.transition;
+
+  el.style.transition = 'outline 0.2s ease-in-out';
+  el.style.outline = '3px solid #ef4444';
+
+  setTimeout(() => {
+    el.style.outline = prevOutline;
+    el.style.transition = prevTransition;
+  }, 2500);
+
+  return true;
+}
 
 /**
  * Content script entry point.
@@ -19,6 +44,17 @@ const PLATFORMS: Platform[] = ['youtube', 'instagram', 'facebook', 'tiktok'];
 function start(): void {
   const { enabledPlatforms } = settingsStore.getState();
   const enabled = PLATFORMS.filter((platform) => enabledPlatforms[platform]);
+
+  // Listen for jump/highlight messages from the sidepanel
+  if (typeof chrome !== 'undefined' && chrome.runtime?.onMessage) {
+    chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+      if (message?.type === MSG.HIGHLIGHT_COMMENT && typeof message.commentId === 'string') {
+        const found = highlightComment(message.commentId);
+        sendResponse({ ok: found, error: found ? undefined : 'Comment not found on page' });
+        return true;
+      }
+    });
+  }
 
   getEnabledAdapters(enabled)
     .then((adapters) => {
@@ -37,8 +73,25 @@ function start(): void {
             // Skip comments we cannot attach a button to.
             const container = comment.elementRef;
             if (!container) continue;
+            commentElementMap.set(comment.id, container);
+
             inferComment(comment).then((analysis) => {
               if (!comment.elementRef) return; // comment detached while analysing
+
+              if (analysis.isHateSpeech || analysis.issues.length > 0) {
+                void recordFlaggedComment({
+                  commentId: comment.id,
+                  platform: comment.platform,
+                  author: comment.author,
+                  text: comment.text,
+                  url: typeof window !== 'undefined' ? window.location.href : '',
+                  sentiment: analysis.sentiment,
+                  isHateSpeech: analysis.isHateSpeech,
+                  hateSpeechScore: analysis.hateSpeechScore,
+                  issues: analysis.issues,
+                });
+              }
+
               renderCommentControls({
                 container: container as unknown as UiElement,
                 comment,

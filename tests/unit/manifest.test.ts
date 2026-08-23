@@ -74,3 +74,17 @@ describe('manifest host permissions', () => {
     expect(overlap).toHaveLength(0);
   });
 });
+
+describe('manifest side_panel', () => {
+  it('declares sidePanel in permissions', () => {
+    const manifest = readManifest();
+    const perms = (manifest.permissions as string[]) ?? [];
+    expect(perms).toContain('sidePanel');
+  });
+
+  it('declares side_panel default_path pointing to sidepanel.html', () => {
+    const manifest = readManifest();
+    const sidePanel = manifest.side_panel as Record<string, string> | undefined;
+    expect(sidePanel?.default_path).toBe('sidepanel.html');
+  });
+});

@@ -51,4 +51,19 @@ describe('buildFirefoxManifest', () => {
       input.content_security_policy
     );
   });
+
+  it('converts side_panel to sidebar_action and removes unsupported sidePanel permission', () => {
+    const input = {
+      permissions: ['storage', 'sidePanel', 'offscreen'],
+      side_panel: { default_path: 'sidepanel.html' },
+    };
+    const manifest = buildFirefoxManifest(input);
+
+    expect(manifest.side_panel).toBeUndefined();
+    expect(manifest.permissions).toEqual(['storage', 'offscreen']);
+    expect(manifest.sidebar_action).toEqual({
+      default_panel: 'sidepanel.html',
+      default_title: 'NoH8 Dashboard',
+    });
+  });
 });

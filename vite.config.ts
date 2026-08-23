@@ -23,7 +23,10 @@ const manifest = defineManifest({
       "128": "icons/icon128.png"
     }
   },
-  permissions: ["storage", "scripting", "offscreen"],
+  permissions: ["storage", "scripting", "offscreen", "sidePanel"],
+  side_panel: {
+    default_path: "sidepanel.html"
+  },
   host_permissions: [
     ...PLATFORM_MATCHES,
     "https://huggingface.co/*",
@@ -70,6 +73,7 @@ export default defineConfig({
       input: {
         popup: new URL('./popup.html', import.meta.url).pathname,
         settings: new URL('./settings.html', import.meta.url).pathname,
+        sidepanel: new URL('./sidepanel.html', import.meta.url).pathname,
         offscreen: new URL('./src/offscreen/offscreen.html', import.meta.url).pathname
       }
     }

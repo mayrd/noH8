@@ -15,6 +15,7 @@ export const MSG = {
   DOWNLOAD: 'noh8:downloadModel',
   DELETE: 'noh8:deleteModel',
   REFRESH: 'noh8:refreshModel',
+  HIGHLIGHT_COMMENT: 'noh8:highlightComment',
 } as const;
 
 export type NoH8MessageType = (typeof MSG)[keyof typeof MSG];
@@ -23,6 +24,11 @@ export interface AnalyzeRequest {
   type: typeof MSG.ANALYZE;
   text: string;
   commentId?: string;
+}
+
+export interface HighlightCommentRequest {
+  type: typeof MSG.HIGHLIGHT_COMMENT;
+  commentId: string;
 }
 
 export type ModelActionType =
@@ -35,8 +41,12 @@ export interface ModelCommandRequest {
   modelId: string;
 }
 
-/** Any message the client can send towards the offscreen pipeline. */
-export type NoH8Request = ({ requestId: string } & (AnalyzeRequest | ModelCommandRequest)) & {
+/** Any message the client can send towards the offscreen pipeline or content script. */
+export type NoH8Request = ({ requestId: string } & (
+  | AnalyzeRequest
+  | ModelCommandRequest
+  | HighlightCommentRequest
+)) & {
   /** Set by the service worker when relaying towards the offscreen doc. */
   relayed?: boolean;
 };
