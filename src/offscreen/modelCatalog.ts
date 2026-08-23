@@ -10,7 +10,7 @@ import type { CommentAnalysis, Sentiment, SentimentLabel } from '../shared/types
  * entirely locally (WebAssembly/WebGPU) inside the offscreen document.
  */
 
-export type ModelMode = 'toxicity' | 'polarity';
+export type ModelMode = 'toxicity' | 'polarity' | 'star-rating';
 
 export interface ModelDescriptor {
   /** Stable, unique id used across storage + messaging. */
@@ -27,6 +27,8 @@ export interface ModelDescriptor {
    * How the model's output should be interpreted:
    *  - `toxicity`: labels map 1:1 to the presence of harmful/abusive content.
    *  - `polarity`: labels describe positive/negative sentiment.
+   *  - `star-rating`: labels are ordinal star counts (e.g. "1 star" … "5 stars").
+   *    A confidence-weighted average of the ordinal positions maps to [-1, 1].
    */
   mode: ModelMode;
   /** Model output labels treated as hateful/abusive (toxicity models). */
@@ -35,6 +37,12 @@ export interface ModelDescriptor {
   positiveLabel?: string;
   /** Model output label associated with negative sentiment (polarity models). */
   negativeLabel?: string;
+  /**
+   * Ordered list of star-rating labels from worst to best, e.g.
+   * `["1 star", "2 stars", "3 stars", "4 stars", "5 stars"]`.
+   * Required when `mode === "star-rating"`.
+   */
+  starLabels?: string[];
 }
 
 export const MODEL_CATALOG: ModelDescriptor[] = [
@@ -62,10 +70,12 @@ export const MODEL_CATALOG: ModelDescriptor[] = [
       'Lightweight multilingual model analysing positive/negative sentiment across many languages.',
     task: 'text-classification',
     modelId: 'Xenova/bert-base-multilingual-uncased-sentiment',
-    mode: 'polarity',
+    // This model (nlptown/bert-base-multilingual-uncased-sentiment) outputs
+    // 1–5 star rating labels, NOT binary positive/negative. We map the ordinal
+    // positions to [-1, +1] using a confidence-weighted average.
+    mode: 'star-rating',
     hateLabels: [],
-    positiveLabel: 'positive',
-    negativeLabel: 'negative',
+    starLabels: ['1 star', '2 stars', '3 stars', '4 stars', '5 stars'],
   },
   {
     id: 'sst-2-english',
@@ -140,6 +150,36 @@ function sentimentLabelFor(score: number): SentimentLabel {
 }
 
 /**
+ * Compute a [-1, +1] sentiment score from star-rating model outputs.
+ *
+ * Each label in `orderedLabels` is mapped to a linearly spaced ordinal position
+ * in [-1, +1]. The final score is the confidence-weighted average of all label
+ * positions, so the model's full probability distribution is used rather than
+ * just the argmax.
+ *
+ * Example for a 5-star model:
+ *   "1 star" → -1.0, "2 stars" → -0.5, "3 stars" → 0.0,
+ *   "4 stars" → +0.5, "5 stars" → +1.0
+ */
+function starRatingScore(outputs: RawModelOutput[], orderedLabels: string[]): number {
+  const n = orderedLabels.length;
+  if (n === 0) return 0;
+  const labelToPosition = new Map<string, number>(
+    orderedLabels.map((label, i) => [label.toLowerCase(), n === 1 ? 0 : -1 + (2 * i) / (n - 1)])
+  );
+  let weightedSum = 0;
+  let totalWeight = 0;
+  for (const out of outputs) {
+    const position = labelToPosition.get(out.label.toLowerCase());
+    if (position !== undefined) {
+      weightedSum += position * out.score;
+      totalWeight += out.score;
+    }
+  }
+  return totalWeight === 0 ? 0 : clamp(weightedSum / totalWeight, -1, 1);
+}
+
+/**
  * Convert a model's raw output into the extension's `CommentAnalysis` payload.
  * Model-agnostic: the descriptor decides how labels map to sentiment/hate.
  */
@@ -164,6 +204,10 @@ export function commentAnalysisFromOutputs(options: {
     hateSpeechScore = bestScore(outputs, descriptor.hateLabels);
     // Low-to-no toxicity maps to positive sentiment, high toxicity to negative.
     sentimentScore = 1 - 2 * hateSpeechScore;
+  } else if (descriptor.mode === 'star-rating') {
+    sentimentScore = starRatingScore(outputs, descriptor.starLabels ?? []);
+    // Treat very-low star ratings (score ≤ -0.6, roughly 1–2 stars) as near-hate.
+    hateSpeechScore = sentimentScore <= -0.6 ? Math.abs(sentimentScore) : 0;
   } else {
     const positive = bestScore(outputs, [descriptor.positiveLabel ?? '']);
     const negative = bestScore(outputs, [descriptor.negativeLabel ?? '']);
