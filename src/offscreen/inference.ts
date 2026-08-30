@@ -9,6 +9,7 @@ import { analyzeCommentText } from '../content/analysis/sentimentAnalyzer';
 import { modelStore } from '../settings/modelStore';
 import { MSG } from '../shared/messages';
 import { loadTransformers } from './transformersLoader';
+import { calibrateAnalysis } from './calibration';
 
 /**
  * On-device inference for NoH8, hosted inside the offscreen document.
@@ -195,7 +196,11 @@ export async function analyzeComment(
   const modelId = modelStore.getState().selectedModelId;
   try {
     const result = await analyzeWithModel(text, modelId);
-    return { ...result, commentId };
+    // M13: apply the locally-learned calibration at result-ingestion time —
+    // a raw score below the calibrated threshold is downgraded to
+    // not_flagged (the raw score stays available for the modal).
+    const calibrated = await calibrateAnalysis({ ...result, commentId }, modelId);
+    return { ...result, ...calibrated, commentId };
   } catch (error) {
     console.warn(
       `[NoH8] model inference failed (${modelId}), using heuristic fallback:`,

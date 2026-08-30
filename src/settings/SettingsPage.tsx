@@ -2,6 +2,7 @@ import React from 'react';
 import { useSettingsStore } from '../settings/settingsStore';
 import { getMatchesForPlatform } from '../content/platformConfig';
 import ModelManager from './ModelManager';
+import { resetLearnedCalibration } from '../offscreen/calibration';
 import type { Platform } from '../settings/types';
 
 const YOUTUBE_ICON: React.FC = () => (
@@ -54,6 +55,20 @@ const SettingsPage: React.FC = () => {
       )
     ) {
       resetToDefaults();
+    }
+  };
+
+  /**
+   * M13: clear the locally-learned threshold calibration (derived from the
+   * user's false-positive dismissals). The dismissal history itself is kept.
+   */
+  const handleResetCalibration = () => {
+    if (
+      confirm(
+        'Reset learned calibration?\n\nThis clears the flag-threshold adjustments NoH8 learned from your dismissed false positives. Your dismissal history is kept.'
+      )
+    ) {
+      void resetLearnedCalibration();
     }
   };
 
@@ -166,12 +181,18 @@ const SettingsPage: React.FC = () => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 px-8 py-4">
+      <footer className="bg-white border-t border-gray-200 px-8 py-4 flex gap-3">
         <button
           onClick={handleReset}
           className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-noh8-500"
         >
           Reset to Defaults
+        </button>
+        <button
+          onClick={handleResetCalibration}
+          className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-noh8-500"
+        >
+          Reset learned calibration
         </button>
       </footer>
     </div>

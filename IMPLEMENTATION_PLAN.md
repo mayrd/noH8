@@ -306,29 +306,31 @@ activation.
       `tests/unit/SettingsPopup.test.tsx` + `tests/unit/Sidepanel.test.tsx`
       empty-state nudge tests.)
 
-### M13 — Local feedback calibration *(detection quality, privacy-preserving learning)* ⬜ TODO
+### M13 — Local feedback calibration *(detection quality, privacy-preserving learning)* ✅ DONE
 
 False-positive dismissals (M9) currently only hide comments. The user's
 corrections are a signal that should improve future scoring — without any
 server round-trip.
 
-- [ ] `src/offscreen/calibration.ts`: pure, DI-injected
+- [x] `src/offscreen/calibration.ts`: pure, DI-injected
       `createCalibration({ storage, defaults })` that derives per-model
       threshold adjustments from the persisted dismissal keys
       (`noh8_dismissed_flags`): each local dismissal nudges the flag threshold
       up by a small bounded step (clamped, e.g. +0.02 per dismissal, max +0.2),
       converging instead of running away.
-- [ ] Calibration applies at result-ingestion time in the offscreen pipeline:
+- [x] Calibration applies at result-ingestion time in the offscreen pipeline:
       `CommentAnalysis` below the calibrated threshold is downgraded to
       `not_flagged` (the raw score stays available for the modal).
-- [ ] Fully resettable: the settings page exposes "Reset learned calibration",
+- [x] Fully resettable: the settings page exposes "Reset learned calibration",
       clearing only the derived thresholds (dismissal history is untouched).
-- [ ] No new permissions, no network, no telemetry — everything derives from
+- [x] No new permissions, no network, no telemetry — everything derives from
       data already on the device.
-- [ ] Acceptance: unit tests for threshold derivation (monotonic, clamped,
+- [x] Acceptance: unit tests for threshold derivation (monotonic, clamped,
       converging steps, reset-to-defaults), an offscreen ingestion test that a
       calibrated-below-threshold analysis is downgraded, and an architecture
       guard test asserting `calibration.ts` imports no network modules.
+      (`tests/unit/calibration.test.ts` — 18 tests, plus 2 SettingsPage
+      reset-calibration tests.) Full `npm run check` green.
 
 ### M14 — Reply-thread & context analysis *(detection quality, adapters)* ⬜ TODO
 

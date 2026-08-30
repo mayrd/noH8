@@ -35,6 +35,11 @@ vi.mock('../../src/offscreen/client', () => ({
   requestModelCommand: vi.fn(),
 }));
 
+const resetLearnedCalibration = vi.fn();
+vi.mock('../../src/offscreen/calibration', () => ({
+  resetLearnedCalibration: (...args: unknown[]) => resetLearnedCalibration(...args),
+}));
+
 vi.mock('../../src/content/platformConfig', () => ({
   getMatchesForPlatform: (p: string) => [`matches-for-${p}`],
   getAllMatches: () => [],
@@ -94,13 +99,13 @@ describe('SettingsPage', () => {
 
   test('renders a reset button', () => {
     render(<SettingsPage />);
-    expect(screen.getByRole('button', { name: /reset/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Reset to Defaults' })).toBeInTheDocument();
   });
 
   test('clicking reset calls resetToDefaults after confirm', async () => {
     const user = userEvent.setup();
     render(<SettingsPage />);
-    await user.click(screen.getByRole('button', { name: /reset/i }));
+    await user.click(screen.getByRole('button', { name: 'Reset to Defaults' }));
     expect(window.confirm).toHaveBeenCalled();
     expect(resetToDefaults).toHaveBeenCalled();
   });
@@ -109,7 +114,7 @@ describe('SettingsPage', () => {
     const user = userEvent.setup();
     window.confirm = vi.fn(() => false);
     render(<SettingsPage />);
-    await user.click(screen.getByRole('button', { name: /reset/i }));
+    await user.click(screen.getByRole('button', { name: 'Reset to Defaults' }));
     expect(resetToDefaults).not.toHaveBeenCalled();
   });
 
@@ -132,6 +137,23 @@ describe('SettingsPage', () => {
     render(<SettingsPage />);
     await user.click(screen.getByLabelText(/review own comment drafts/i));
     expect(setReviewOwnCommentDrafts).toHaveBeenCalledWith(false);
+  });
+
+  test('renders a "Reset learned calibration" button that resets after confirm', async () => {
+    const user = userEvent.setup();
+    render(<SettingsPage />);
+    const button = screen.getByRole('button', { name: /reset learned calibration/i });
+    await user.click(button);
+    expect(window.confirm).toHaveBeenCalled();
+    expect(resetLearnedCalibration).toHaveBeenCalled();
+  });
+
+  test('does not reset learned calibration when the user cancels the confirm', async () => {
+    const user = userEvent.setup();
+    window.confirm = vi.fn(() => false);
+    render(<SettingsPage />);
+    await user.click(screen.getByRole('button', { name: /reset learned calibration/i }));
+    expect(resetLearnedCalibration).not.toHaveBeenCalled();
   });
 });
 
