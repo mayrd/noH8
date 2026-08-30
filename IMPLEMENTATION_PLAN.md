@@ -234,6 +234,27 @@ with them. Now the user controls the signal.
   format — 5 tests), `Sidepanel.test.tsx` (Dismiss removes the flag; Export
   creates a JSON Blob download — 2 new tests). Full `npm run check` green.
 
+### M10 — Scan performance & inference throttling *(content-script performance)* ✅ DONE
+
+Adapter observers can surface comment bursts (infinite scroll, thread
+expansion) and every comment hit the offscreen pipeline immediately and
+unconditionally; re-scans re-inferred already-analysed comments.
+
+- [x] `src/content/analysis/inferenceScheduler.ts`: pure, DI-injected
+  `createInferenceScheduler({ infer, concurrency = 2 })` returning
+  `schedule` / `pendingCount` / `clearCache`. Caps concurrent inferences
+  (FIFO queue), deduplicates concurrent schedules for the same comment onto a
+  single in-flight promise, caches completed analyses by `commentId::text`
+  (mirroring `flagStore.dismissalKeyFor`), never caches failures (retry on
+  next schedule), and `clearCache()` resets.
+- [x] `src/content/index.ts` now routes both the comment-observation and the
+  draft-review inference paths through the scheduler (concurrency 2).
+- [x] Acceptance: `tests/unit/inferenceScheduler.test.ts` — result
+  passthrough, concurrency cap, FIFO start order, concurrent dedupe
+  (identity-shared result), completed-result cache, text-sensitive cache
+  key, failure isolation, no caching of failures, `pendingCount`,
+  `clearCache` (10 tests). Full `npm run check` green (233 tests).
+
 ---
 
 ## 6. Suggested Load Order for an AI Assistant

@@ -1,6 +1,7 @@
 import { getEnabledAdapters } from './adapters/registry';
 import { initSettingsStore, settingsStore } from '../settings/settingsStore';
 import { inferComment } from './analysis/inferenceClient';
+import { createInferenceScheduler } from './analysis/inferenceScheduler';
 import { renderCommentControls } from './ui/commentUi';
 import { renderDraftReviewButton } from './ui/commentUi';
 import type { UiDocument, UiElement, UiWindow } from './ui/commentUi';
@@ -11,6 +12,17 @@ import { asUiDocument, asUiElement, asUiWindow } from '../shared/domBridge';
 
 const PLATFORMS: Platform[] = ['youtube', 'instagram', 'facebook', 'tiktok'];
 const commentElementMap = new Map<string, UiElement>();
+
+/**
+ * Concurrency-limited, deduplicating front end for on-device inference
+ * (M10). Adapter observers can surface comment bursts on infinite-scroll
+ * pages; the scheduler caps concurrent pipeline requests and never
+ * re-infers a comment that was already analysed on this page load.
+ */
+const scheduler = createInferenceScheduler({
+  infer: (comment) => inferComment({ id: comment.commentId, text: comment.text }),
+  concurrency: 2,
+});
 
 /**
  * Highlight and scroll to a comment element when requested by the sidepanel.
@@ -77,7 +89,7 @@ function start(): void {
             if (!container) continue;
             commentElementMap.set(comment.id, container);
 
-            inferComment(comment).then((analysis) => {
+            scheduler.schedule({ commentId: comment.id, text: comment.text }).then((analysis) => {
               if (!comment.elementRef) return; // comment detached while analysing
 
               if (analysis.isHateSpeech || analysis.issues.length > 0) {
@@ -134,7 +146,7 @@ function start(): void {
               platform: adapter.platformName,
               doc: asUiDocument(document),
               windowRef: asUiWindow(window),
-              analyze: inferComment,
+              analyze: (draft) => scheduler.schedule({ commentId: draft.id, text: draft.text }),
               author: 'You',
             });
           });
