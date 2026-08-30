@@ -82,7 +82,8 @@ export default defineConfig({
         popup: new URL('./popup.html', import.meta.url).pathname,
         settings: new URL('./settings.html', import.meta.url).pathname,
         sidepanel: new URL('./sidepanel.html', import.meta.url).pathname,
-        offscreen: new URL('./src/offscreen/offscreen.html', import.meta.url).pathname
+        offscreen: new URL('./src/offscreen/offscreen.html', import.meta.url).pathname,
+        welcome: new URL('./welcome.html', import.meta.url).pathname
       }
     }
   }

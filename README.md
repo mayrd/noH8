@@ -39,6 +39,7 @@ NoH8 uses `Transformers.js` with ONNX WebAssembly/WebGPU to analyze social media
 - ✅ False-positive dismissal (per-comment) and one-click JSON export of flagged comments
 - ✅ Concurrency-limited, deduplicating inference scheduler so comment bursts never overwhelm the pipeline
 - ✅ Chrome Manifest v3 extension with Firefox build path
+- ✅ First-run welcome page: privacy promise, per-platform toggles, and a one-click first model download (never shown twice)
 
 ## On-device inference & model management
 NoH8 runs a `text-classification` model inside an **offscreen document** so the

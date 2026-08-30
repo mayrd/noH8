@@ -278,29 +278,33 @@ the docs lagged behind M9/M10.
 - [x] Acceptance: `releaseVersion.test.ts` (6 tests) green; full `npm run check`
   green; Firefox package inspected.
 
-### M12 — Onboarding & first-run experience *(UX, permissions flow)* ⬜ TODO
+### M12 — Onboarding & first-run experience *(UX, permissions flow)* ✅ DONE
 
 NoH8 requires optional per-platform host permissions, but a fresh install drops
 the user into an empty state: no granted permissions, no model downloaded, and
 no explanation of what the extension does. First-run friction directly costs
 activation.
 
-- [ ] First-install welcome flow: on `chrome.runtime.onInstalled` (details.reason
+- [x] First-install welcome flow: on `chrome.runtime.onInstalled` (details.reason
       === `install`), open a dedicated `welcome.html` page (new React surface
       sharing the settings store).
-- [ ] Welcome page walks the user through: (1) what NoH8 does / privacy promise,
+- [x] Welcome page walks the user through: (1) what NoH8 does / privacy promise,
       (2) toggling each platform — which triggers the existing
       `src/permissions/` optional-permission request, (3) nudging a first model
       download via the existing `modelStore`/`client.ts` command path.
-- [ ] Completion state persisted (`noh8_onboarded` in `chrome.storage.local`);
+- [x] Completion state persisted (`noh8_onboarded` in `chrome.storage.local`);
       background setup skips re-opening the page once set.
-- [ ] Sidepanel / popup empty states link to the welcome page when nothing is
+- [x] Sidepanel / popup empty states link to the welcome page when nothing is
       enabled or no model is ready.
-- [ ] Acceptance: unit tests for the onboarding flag helpers (set/get/skip
+- [x] Acceptance: unit tests for the onboarding flag helpers (set/get/skip
       semantics), a `.tsx` suite for the welcome flow component (toggles invoke
       the permission mock, completion persists the flag, "skip" also persists),
       and a background-setup test that the welcome page opens only for
       `install` reasons and only when not yet onboarded.
+      (`tests/unit/onboarding.test.ts` — 10 tests, `tests/unit/Welcome.test.tsx`
+      — 5 tests, `tests/unit/backgroundSetup.test.ts` M12 block — 3 tests,
+      `tests/unit/SettingsPopup.test.tsx` + `tests/unit/Sidepanel.test.tsx`
+      empty-state nudge tests.)
 
 ### M13 — Local feedback calibration *(detection quality, privacy-preserving learning)* ⬜ TODO
 

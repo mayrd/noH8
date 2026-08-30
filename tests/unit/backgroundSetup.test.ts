@@ -10,6 +10,7 @@ const storageSet = vi.fn(
   (items: Record<string, unknown>, cb?: () => void) => cb?.()
 );
 const runtimeSend = vi.fn().mockResolvedValue({ ok: true, data: 'from-offscreen' });
+const tabsCreate = vi.fn();
 
 global.chrome = {
   offscreen: {
@@ -24,12 +25,14 @@ global.chrome = {
     sendMessage: runtimeSend,
     getURL: (path: string) => `chrome-extension://abc/${path}`,
   },
+  tabs: { create: tabsCreate },
 } as any;
 
 import {
   ensureOffscreenDocument,
   runExtensionSetup,
   handleBackgroundMessage,
+  maybeOpenWelcomePage,
 } from '../../src/background/setup';
 
 describe('background setup (on-install initialisation)', () => {
@@ -105,5 +108,36 @@ describe('background setup (on-install initialisation)', () => {
       expect.objectContaining({ type: 'noh8:analyze', text: 'hello world' })
     );
     expect(result).toEqual({ ok: true, data: 'from-offscreen' });
+  });
+});
+
+describe('welcome-page onboarding (M12)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    hasDocument.mockResolvedValue(false);
+    storageGet.mockImplementation(
+      (key, cb) => cb({}) // empty storage => not yet onboarded
+    );
+  });
+
+  test('opens the welcome page on install when not yet onboarded', async () => {
+    await maybeOpenWelcomePage('install');
+    expect(tabsCreate).toHaveBeenCalledTimes(1);
+    expect(tabsCreate.mock.calls[0][0].url).toContain('welcome.html');
+  });
+
+  test('does not open the welcome page for non-install reasons (update/startup)', async () => {
+    await maybeOpenWelcomePage('update');
+    await maybeOpenWelcomePage('browser_update');
+    await maybeOpenWelcomePage('chrome_update');
+    expect(tabsCreate).not.toHaveBeenCalled();
+  });
+
+  test('does not open the welcome page once onboarding is complete', async () => {
+    storageGet.mockImplementation((key, cb) =>
+      cb({ noh8_onboarded: true })
+    );
+    await maybeOpenWelcomePage('install');
+    expect(tabsCreate).not.toHaveBeenCalled();
   });
 });

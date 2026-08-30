@@ -1,4 +1,4 @@
-import { runExtensionSetup, handleBackgroundMessage } from './setup';
+import { runExtensionSetup, handleBackgroundMessage, maybeOpenWelcomePage } from './setup';
 import { MSG, type NoH8MessageType, type NoH8Request } from '../shared/messages';
 
 /**
@@ -23,10 +23,10 @@ chrome.runtime.onInstalled.addListener((details) => {
   console.info(`[NoH8] installed (reason: ${details.reason}) running setup`);
   void runExtensionSetup();
 
-  // Open the settings page in a new tab
-  chrome.tabs.create({
-    url: chrome.runtime.getURL('settings.html')
-  });
+  // First-run onboarding: open the welcome page only on a fresh install and
+  // only when the user has not yet completed/skipped it. The full settings
+  // page remains reachable from the popup and the welcome flow itself.
+  void maybeOpenWelcomePage(details.reason);
 });
 
 chrome.runtime.onStartup.addListener(() => {

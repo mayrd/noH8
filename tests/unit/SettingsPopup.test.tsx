@@ -4,13 +4,25 @@ import userEvent from '@testing-library/user-event';
 import { describe, test, expect, vi, beforeEach } from 'vitest';
 
 const enabledPlatforms = { youtube: true, instagram: false, facebook: true, tiktok: true };
+let popupEnabledPlatforms = { ...enabledPlatforms };
 
 vi.mock('../../src/settings/settingsStore', () => ({
   useSettingsStore: () => ({
-    enabledPlatforms,
+    enabledPlatforms: popupEnabledPlatforms,
     setEnabledPlatform: vi.fn(),
     resetToDefaults: vi.fn(),
   }),
+}));
+
+const mockReadyModelStore = {
+  selectedModelId: 'toxic-bert',
+  downloadedModels: ['toxic-bert'],
+  modelStatus: { 'toxic-bert': 'ready' },
+  downloadProgress: {},
+};
+
+vi.mock('../../src/settings/modelStore', () => ({
+  useModelStore: () => mockReadyModelStore,
 }));
 
 const { default: SettingsPopup } = await import('../../src/settings/SettingsPopup');
@@ -54,6 +66,23 @@ describe('SettingsPopup', () => {
     const { container } = render(<SettingsPopup onOpenSettings={onOpenSettings} />);
     const popupRoot = container.firstChild as HTMLElement;
     expect(popupRoot.className).toMatch(/w-80|w-72|max-w-/);
+  });
+
+  test('shows the welcome setup link when nothing is enabled (empty state)', async () => {
+    popupEnabledPlatforms = { youtube: false, instagram: false, facebook: false, tiktok: false };
+    const onOpenWelcome = vi.fn();
+    const user = userEvent.setup();
+    render(<SettingsPopup onOpenSettings={onOpenSettings} onOpenWelcome={onOpenWelcome} />);
+    const setupButton = screen.getByRole('button', { name: /set up noh8/i });
+    await user.click(setupButton);
+    expect(onOpenWelcome).toHaveBeenCalledTimes(1);
+    popupEnabledPlatforms = { ...enabledPlatforms };
+  });
+
+  test('hides the welcome setup link when a platform is enabled and the model is ready', () => {
+    popupEnabledPlatforms = { ...enabledPlatforms };
+    render(<SettingsPopup onOpenSettings={onOpenSettings} />);
+    expect(screen.queryByRole('button', { name: /set up noh8/i })).not.toBeInTheDocument();
   });
 });
 

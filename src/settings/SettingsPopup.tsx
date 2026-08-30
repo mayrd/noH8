@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useSettingsStore } from '../settings/settingsStore';
+import { useModelStore } from '../settings/modelStore';
+import { needsOnboarding } from '../settings/onboarding';
 
 interface SettingsPopupProps {
   onOpenSettings: () => void;
+  /** Opens the first-run welcome page (used by the empty-state setup nudge). */
+  onOpenWelcome?: () => void;
 }
 
-const SettingsPopup: React.FC<SettingsPopupProps> = ({ onOpenSettings }) => {
+const SettingsPopup: React.FC<SettingsPopupProps> = ({ onOpenSettings, onOpenWelcome }) => {
   const [flaggedCount, setFlaggedCount] = useState(0);
   const { enabledPlatforms } = useSettingsStore();
+  const { selectedModelId, downloadedModels, modelStatus } = useModelStore();
 
   // In a real implementation, this would listen to messages from content script
   // about flagged comments on the current page.
@@ -29,6 +34,17 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ onOpenSettings }) => {
           {enabledCount}/4 platforms
         </span>
       </header>
+
+      {/* First-run setup nudge: shown when nothing is enabled or no model is ready */}
+      {needsOnboarding(enabledPlatforms, { selectedModelId, downloadedModels, modelStatus }) && (
+        <button
+          type="button"
+          onClick={onOpenWelcome}
+          className="w-full mb-4 px-4 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-500 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          Set up NoH8
+        </button>
+      )}
 
       {/* Flagged comments summary */}
       <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100">

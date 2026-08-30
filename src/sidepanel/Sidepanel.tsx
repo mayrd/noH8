@@ -11,6 +11,13 @@ import { buildReportUrl, PLATFORM_LABELS, type ReportPlatform } from '../content
 import { dismissFlaggedComment } from './flagStore';
 import { exportFlagsToJson, flagsExportFileName } from './flagExport';
 
+/** Opens the first-run welcome page in a new tab. */
+function openWelcomePage(): void {
+  if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
+    chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') });
+  }
+}
+
 const ISSUE_OPTIONS: Array<{ value: IssueId | 'all'; label: string }> = [
   { value: 'all', label: 'All Issues' },
   { value: 'hate_speech', label: 'Hate Speech' },
@@ -197,6 +204,13 @@ export const Sidepanel: React.FC = () => {
                 ? 'No hate speech detected on this page yet.'
                 : 'Your review list is empty.'}
             </p>
+            <button
+              type="button"
+              onClick={openWelcomePage}
+              className="mt-4 px-4 py-2 text-xs font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-500 transition"
+            >
+              Set up NoH8
+            </button>
           </div>
         ) : (
           displayedComments.map((comment) => (

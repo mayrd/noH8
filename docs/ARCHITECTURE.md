@@ -114,6 +114,8 @@ flowchart TB
 ### Settings layer (`src/settings/`)
 - **`settingsStore.ts`** (→ `chrome.storage.sync`) — enabled platforms, review drafts preference, and permissions.
 - **`modelStore.ts`** (→ `chrome.storage.local`) — selected model, downloaded models, and download progress.
+- **`onboarding.ts`** — first-run `noh8_onboarded` flag helpers and the `needsOnboarding` predicate used by the popup/sidepanel setup nudges.
+- **`Welcome.tsx`** (→ `welcome.html`) — first-run welcome flow: privacy promise, platform toggles (permission requests), first model download; persists the onboarding flag on completion or skip.
 - **React UI** — `SettingsPage`, `ModelManager`, and `SettingsPopup`.
 
 ## 4. Storage & Permissions

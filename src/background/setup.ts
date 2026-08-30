@@ -4,6 +4,7 @@ import {
   type ModelStorageState,
 } from '../settings/modelStore';
 import type { NoH8Request, NoH8Response } from '../shared/messages';
+import { isOnboarded } from '../settings/onboarding';
 
 /**
  * Background service worker setup + routing.
@@ -55,6 +56,23 @@ export async function ensureOffscreenDocument(): Promise<boolean> {
 export async function runExtensionSetup(): Promise<void> {
   await seedModelSettings();
   await ensureOffscreenDocument();
+}
+
+/**
+ * Open the first-run welcome page, but only when the runtime event is an
+ * actual install (not an update/browser restart) and the user has not yet
+ * completed or skipped onboarding. The flag check makes this idempotent —
+ * the page never auto-opens twice.
+ */
+export async function maybeOpenWelcomePage(reason: string | undefined): Promise<void> {
+  if (reason !== 'install') return;
+  if (typeof chrome === 'undefined' || !chrome.tabs?.create) return;
+  if (await isOnboarded()) return;
+  try {
+    chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') });
+  } catch (error) {
+    console.warn('[NoH8] could not open the welcome page:', error);
+  }
 }
 
 /**
