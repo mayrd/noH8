@@ -149,18 +149,26 @@ export async function handleOffscreenRequest(
   }
 }
 
+/**
+ * A TextClassifier is the callable returned by Transformers.js's
+ * `pipeline('text-classification', ...)`. It classifies a single text string
+ * and returns the model's raw output (shape normalized downstream by
+ * `normalizeRawOutput`).
+ */
+type TextClassifier = (input: string, opts?: { topk?: number }) => Promise<unknown>;
+
 /** Singleton pipelines keyed by catalog model id. */
-const PIPELINES = new Map<string, unknown>();
+const PIPELINES = new Map<string, TextClassifier>();
 
 async function getPipeline(
   descriptor: ModelDescriptor,
   onProgress?: (event: { status?: string; progress?: number }) => void
-): Promise<unknown> {
+): Promise<TextClassifier> {
   const existing = PIPELINES.get(descriptor.id);
   if (existing) return existing;
-  const instance = await pipeline(descriptor.task, descriptor.modelId, {
+  const instance = (await pipeline(descriptor.task, descriptor.modelId, {
     ...(onProgress ? { progress_callback: onProgress } : {}),
-  });
+  })) as TextClassifier;
   PIPELINES.set(descriptor.id, instance);
   return instance;
 }
@@ -185,10 +193,7 @@ export async function analyzeWithModel(
   if (!descriptor) throw new Error(`Unknown model: ${modelId}`);
 
   const instance = await getPipeline(descriptor);
-  const raw = await (instance as (input: string, opts?: object) => Promise<unknown>)(
-    text,
-    { topk: 10 }
-  );
+  const raw = await instance(text, { topk: 10 });
   return commentAnalysisFromOutputs({
     modelId: descriptor.id,
     commentId: '',

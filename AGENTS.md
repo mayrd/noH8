@@ -131,11 +131,16 @@ Run everything through npm from the repo root. Node 20+ (repo tested on v24).
 
 ## 5. Known Debt & Roadmap
 
-- `tsconfig.json` sets `"strict": false`. **Recommended:** flip to `true` and fix
-  the resulting violations in `registry.ts` (`any` in `import.meta.glob` typing),
-  `permissions.ts` (`hasPermissionsApi(chromeObj: any)`), and `offscreen/inference.ts`
-  (`Map<string, unknown>`, `as`-casts around the Transformers pipeline).
+- **Done:** `tsconfig.json` now sets `"strict": true`. The resulting violations in
+  `registry.ts` (`any` in `import.meta.glob` typing), `permissions.ts`
+  (`hasPermissionsApi(chromeObj: any)`), and `offscreen/inference.ts`
+  (`Map<string, unknown>`, `as`-casts around the Transformers pipeline) have
+  been resolved.
 - `src/content/index.ts` had a structural/boot bug (draft-review code orphaned
   outside the `.then()` chain) that was repaired; keep its boot flow covered.
 - Bundler warns about a >500 kB chunk (Transformers.js). Code-splitting the
-  offscreen pipeline is a possible future optimization.
+  offscreen pipeline (e.g. `manualChunks` or lazy-loading `@xenova/transformers`)
+  is a possible future optimization.
+- `as unknown as X` casts at the DOM boundary (adapters, `content/index.ts`)
+  couple the structural `UiElement`/`UiDocument`/`UiWindow` interfaces to real
+  DOM types. A thin wrapper or widened interfaces could eliminate these.
