@@ -5,6 +5,9 @@ import {
   getFlaggedComments,
   clearFlaggedComments,
   filterFlaggedComments,
+  dismissFlaggedComment,
+  getDismissedKeys,
+  dismissalKeyFor,
   useFlagStore,
   initFlagStore,
   type FlaggedComment,
@@ -194,6 +197,58 @@ describe('flagStore', () => {
 
     // Simulate external change
     await recordFlaggedComment(sampleComment2);
+    // Simulate external change
+    await recordFlaggedComment(sampleComment2);
     expect(useFlagStore.getState().comments).toHaveLength(2);
   });
+
+  it('dismisses a flagged comment and persists the dismissal', async () => {
+    const saved = await recordFlaggedComment(sampleComment1);
+    await dismissFlaggedComment(saved.id);
+
+    // The flag itself is gone...
+    expect(await getFlaggedComments()).toHaveLength(0);
+    // ...and the dismissal is remembered.
+    const dismissed = await getDismissedKeys();
+    expect(dismissed).toContain(dismissalKeyFor(sampleComment1.commentId, sampleComment1.url));
+
+    // Store state reflects the removal.
+    expect(useFlagStore.getState().comments).toHaveLength(0);
+  });
+
+  it('does not re-record a comment that was dismissed as a false positive', async () => {
+    const saved = await recordFlaggedComment(sampleComment1);
+    await dismissFlaggedComment(saved.id);
+
+    const again = await recordFlaggedComment({ ...sampleComment1, hateSpeechScore: 0.99 });
+    expect(again).toBeNull();
+    expect(await getFlaggedComments()).toHaveLength(0);
+  });
+
+  it('still records different comments after one dismissal', async () => {
+    const saved = await recordFlaggedComment(sampleComment1);
+    await dismissFlaggedComment(saved.id);
+
+    await recordFlaggedComment(sampleComment2);
+    const stored = await getFlaggedComments();
+    expect(stored).toHaveLength(1);
+    expect(stored[0].commentId).toBe('ig-456');
+  });
+
+  it('clears dismissals together with a global clear but keeps them on scoped clears', async () => {
+    const saved1 = await recordFlaggedComment(sampleComment1);
+    await recordFlaggedComment(sampleComment2);
+    await dismissFlaggedComment(saved1.id);
+
+    // Scoped clear: dismissal retention is preserved.
+    await clearFlaggedComments({ url: 'https://www.youtube.com/watch?v=abc' });
+    expect(await getDismissedKeys()).toContain(
+      dismissalKeyFor(sampleComment1.commentId, sampleComment1.url)
+    );
+
+    // Global clear: fresh start — dismissals are wiped too.
+    await clearFlaggedComments();
+    expect(await getDismissedKeys()).toHaveLength(0);
+  });
 });
+

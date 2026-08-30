@@ -9,6 +9,7 @@ import type {
 } from '../shared/types';
 
 export const FLAGGED_STORAGE_KEY = 'noh8_flagged_comments';
+export const DISMISSED_STORAGE_KEY = 'noh8_dismissed_flags';
 export const MAX_STORED_FLAGS = 500;
 
 export interface FlaggedComment {
@@ -36,6 +37,37 @@ function hasLocalStorage(): boolean {
   return Boolean(typeof chrome !== 'undefined' && chrome.storage?.local);
 }
 
+/**
+ * Stable identity key for a comment on a page. Used both for in-list
+ * deduplication and for persisted false-positive dismissals.
+ */
+export function dismissalKeyFor(commentId: string, url: string): string {
+  return `${commentId}::${url}`;
+}
+
+async function getDismissedKeySet(): Promise<Set<string>> {
+  if (!hasLocalStorage()) return new Set();
+  const result = await new Promise<Record<string, unknown>>((resolve) => {
+    chrome.storage.local.get(DISMISSED_STORAGE_KEY, (res) => resolve(res ?? {}));
+  });
+  const data = result[DISMISSED_STORAGE_KEY];
+  return new Set(Array.isArray(data) ? (data as string[]) : []);
+}
+
+async function saveDismissedKeys(keys: string[]): Promise<void> {
+  if (!hasLocalStorage()) return;
+  await new Promise<void>((resolve) => {
+    chrome.storage.local.set({ [DISMISSED_STORAGE_KEY]: keys }, () => resolve());
+  });
+}
+
+/**
+ * Retrieve all false-positive dismissal keys persisted by the user.
+ */
+export async function getDismissedKeys(): Promise<string[]> {
+  return [...(await getDismissedKeySet())];
+}
+
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
@@ -54,11 +86,16 @@ export async function getFlaggedComments(): Promise<FlaggedComment[]> {
 
 /**
  * Save or update a flagged comment in chrome.storage.local. Deduplicates by
- * `commentId` and `url`.
+ * `commentId` and `url`. Returns `null` (and records nothing) when the user
+ * has previously dismissed that comment as a false positive.
  */
 export async function recordFlaggedComment(
   item: Omit<FlaggedComment, 'id' | 'timestamp'> & { id?: string; timestamp?: number }
-): Promise<FlaggedComment> {
+): Promise<FlaggedComment | null> {
+  const key = dismissalKeyFor(item.commentId, item.url);
+  const dismissed = await getDismissedKeySet();
+  if (dismissed.has(key)) return null;
+
   const existing = await getFlaggedComments();
   const timestamp = item.timestamp ?? Date.now();
   const id = item.id ?? generateId();
@@ -96,7 +133,32 @@ export async function recordFlaggedComment(
 }
 
 /**
- * Clear stored comments globally or filtered by url/tab.
+ * Remove a single flagged comment and persist it as a false-positive
+ * dismissal so the same comment is not re-flagged on future rescans.
+ */
+export async function dismissFlaggedComment(id: string): Promise<void> {
+  const existing = await getFlaggedComments();
+  const target = existing.find((c) => c.id === id);
+  const remaining = existing.filter((c) => c.id !== id);
+
+  if (target) {
+    const dismissed = await getDismissedKeySet();
+    dismissed.add(dismissalKeyFor(target.commentId, target.url));
+    await saveDismissedKeys([...dismissed]);
+  }
+
+  if (hasLocalStorage()) {
+    await new Promise<void>((resolve) => {
+      chrome.storage.local.set({ [FLAGGED_STORAGE_KEY]: remaining }, () => resolve());
+    });
+  }
+
+  useFlagStore.setState({ comments: remaining });
+}
+
+/**
+ * Clear stored comments globally or filtered by url/tab. A global clear is a
+ * "fresh start" and also wipes persisted dismissals; scoped clears keep them.
  */
 export async function clearFlaggedComments(options?: {
   url?: string;
@@ -106,7 +168,10 @@ export async function clearFlaggedComments(options?: {
 
   if (!options?.url && options?.tabId === undefined) {
     await new Promise<void>((resolve) => {
-      chrome.storage.local.remove(FLAGGED_STORAGE_KEY, () => resolve());
+      chrome.storage.local.remove(
+        [FLAGGED_STORAGE_KEY, DISMISSED_STORAGE_KEY],
+        () => resolve()
+      );
     });
     return;
   }

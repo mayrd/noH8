@@ -8,6 +8,8 @@ import {
 import type { IssueId } from '../shared/types';
 import { MSG } from '../shared/messages';
 import { buildReportUrl, PLATFORM_LABELS, type ReportPlatform } from '../content/ui/reportHelper';
+import { dismissFlaggedComment } from './flagStore';
+import { exportFlagsToJson, flagsExportFileName } from './flagExport';
 
 const ISSUE_OPTIONS: Array<{ value: IssueId | 'all'; label: string }> = [
   { value: 'all', label: 'All Issues' },
@@ -94,6 +96,21 @@ export const Sidepanel: React.FC = () => {
     } else if (typeof window !== 'undefined') {
       window.open(url, '_blank', 'noopener,noreferrer');
     }
+  };
+
+  const handleDismiss = async (comment: FlaggedComment): Promise<void> => {
+    await dismissFlaggedComment(comment.id);
+  };
+
+  const handleExport = (): void => {
+    const json = exportFlagsToJson(comments);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = flagsExportFileName();
+    anchor.click();
+    URL.revokeObjectURL(url);
   };
 
   const percent = (score: number): string => `${Math.round(score * 100)}%`;
@@ -234,6 +251,13 @@ export const Sidepanel: React.FC = () => {
                   </button>
                   <button
                     type="button"
+                    onClick={() => void handleDismiss(comment)}
+                    className="px-2.5 py-1 text-xs font-medium rounded-md bg-slate-800 hover:bg-slate-700 text-slate-400 transition"
+                  >
+                    Dismiss
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => handleReport(comment)}
                     className="px-2.5 py-1 text-xs font-medium rounded-md bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 transition"
                   >
@@ -247,18 +271,27 @@ export const Sidepanel: React.FC = () => {
       </main>
 
       {/* Footer Actions */}
-      {displayedComments.length > 0 && (
         <footer className="p-3 border-t border-slate-800 bg-slate-950 flex justify-between items-center text-xs">
-          <button
-            type="button"
-            onClick={() => void (scope === 'page' ? clearActiveComments() : clearAllComments())}
-            className="text-slate-400 hover:text-rose-400 transition"
-          >
-            Clear {scope === 'page' ? 'page flags' : 'all flags'}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void (scope === 'page' ? clearActiveComments() : clearAllComments())}
+              className="text-slate-400 hover:text-rose-400 transition"
+            >
+              Clear {scope === 'page' ? 'page flags' : 'all flags'}
+            </button>
+            {comments.length > 0 && (
+              <button
+                type="button"
+                onClick={handleExport}
+                className="text-slate-400 hover:text-indigo-300 transition"
+              >
+                Export JSON
+              </button>
+            )}
+          </div>
           <span className="text-slate-500 text-[11px]">100% on-device</span>
         </footer>
-      )}
     </div>
   );
 };

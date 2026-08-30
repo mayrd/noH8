@@ -209,6 +209,31 @@ Kill the offscreen entry chunk bloat caused by the static
   loader). Build: offscreen entry chunk 818 kB → ~3 kB; transformers in a
   separate on-demand chunk; full `npm run check` green.
 
+### M9 — False-positive dismissal & data export *(sidepanel UX, privacy ownership)* ✅ DONE
+
+The dashboard recorded every flag forever with no user recourse: a false
+positive re-appeared on every rescan, and users had no way to take their data
+with them. Now the user controls the signal.
+
+- [x] `flagStore.ts`: persisted false-positive dismissals — `dismissFlaggedComment(id)`
+  removes the flag and records a stable `commentId::url` dismissal key in
+  `chrome.storage.local` (`noh8_dismissed_flags`); `recordFlaggedComment()`
+  returns `null` (records nothing) for dismissed comments; `dismissalKeyFor()`
+  is the single identity-key helper; `getDismissedKeys()` exposes them.
+- [x] Clear semantics: a **global** clear wipes dismissals too (fresh start);
+  **scoped** (per-URL/tab) clears retain them.
+- [x] `src/sidepanel/flagExport.ts`: pure `exportFlagsToJson(comments)`
+  (newest-first, internal DOM references stripped, `exportedAt`/`count`
+  metadata) and `flagsExportFileName()` (`noh8-flags-YYYY-MM-DD.json`).
+- [x] `Sidepanel.tsx`: per-card **Dismiss** button and an **Export JSON**
+  download in the footer (Blob + anchor download, no extra permissions).
+- [x] Acceptance: `flagStore.test.ts` (dismissal persistence, no re-record
+  after dismissal, other comments unaffected, global-vs-scoped clear
+  semantics — 4 new tests), `flagExport.test.ts` (valid JSON payload with all
+  fields, newest-first ordering, empty payload, no `elementRef` leak, filename
+  format — 5 tests), `Sidepanel.test.tsx` (Dismiss removes the flag; Export
+  creates a JSON Blob download — 2 new tests). Full `npm run check` green.
+
 ---
 
 ## 6. Suggested Load Order for an AI Assistant

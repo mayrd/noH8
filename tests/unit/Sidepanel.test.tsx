@@ -153,4 +153,52 @@ describe('Sidepanel Component', () => {
 
     expect(useFlagStore.getState().comments).toHaveLength(0);
   });
+
+  test('clicking "Dismiss" removes the flag and persists the dismissal', async () => {
+    setupMockChrome(undefined, [sampleComment]);
+    useFlagStore.setState({ comments: [sampleComment] });
+    const user = userEvent.setup();
+
+    render(<Sidepanel />);
+
+    const dismissButton = screen.getByRole('button', { name: /dismiss/i });
+    await act(async () => {
+      await user.click(dismissButton);
+    });
+
+    expect(useFlagStore.getState().comments).toHaveLength(0);
+    expect(screen.getByText(/no flagged comments/i)).toBeInTheDocument();
+  });
+
+  test('clicking "Export" downloads the flagged comments as JSON', async () => {
+    setupMockChrome(undefined, [sampleComment]);
+    useFlagStore.setState({ comments: [sampleComment] });
+    const user = userEvent.setup();
+
+    const createdUrls: string[] = [];
+    const revokeObjectURL = vi.fn();
+    const objectURL = vi.fn((blob: Blob) => {
+      createdUrls.push('blob:mock-url');
+      expect(blob.type).toBe('application/json');
+      return 'blob:mock-url';
+    });
+    Object.defineProperty(globalThis, 'URL', {
+      value: { ...globalThis.URL, createObjectURL: objectURL, revokeObjectURL },
+      writable: true,
+    });
+    const anchorClick = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => {});
+
+    render(<Sidepanel />);
+
+    const exportButton = screen.getByRole('button', { name: /export/i });
+    await user.click(exportButton);
+
+    expect(objectURL).toHaveBeenCalledTimes(1);
+    expect(anchorClick).toHaveBeenCalledTimes(1);
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
+
+    anchorClick.mockRestore();
+  });
 });
