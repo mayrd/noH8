@@ -7,27 +7,29 @@ import type { UiDocument, UiElement, UiWindow } from './ui/commentUi';
 import type { Platform } from '../settings/types';
 import { MSG } from '../shared/messages';
 import { recordFlaggedComment } from '../sidepanel/flagStore';
+import { asUiDocument, asUiElement, asUiWindow } from '../shared/domBridge';
 
 const PLATFORMS: Platform[] = ['youtube', 'instagram', 'facebook', 'tiktok'];
-const commentElementMap = new Map<string, HTMLElement>();
+const commentElementMap = new Map<string, UiElement>();
 
 /**
  * Highlight and scroll to a comment element when requested by the sidepanel.
  */
 export function highlightComment(commentId: string): boolean {
   const el = commentElementMap.get(commentId);
-  if (!el || typeof el.scrollIntoView !== 'function') return false;
+  if (!el || typeof el.scrollIntoView !== 'function' || !el.style) return false;
 
+  const style = el.style;
   el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  const prevOutline = el.style.outline;
-  const prevTransition = el.style.transition;
+  const prevOutline = style.outline;
+  const prevTransition = style.transition;
 
-  el.style.transition = 'outline 0.2s ease-in-out';
-  el.style.outline = '3px solid #ef4444';
+  style.transition = 'outline 0.2s ease-in-out';
+  style.outline = '3px solid #ef4444';
 
   setTimeout(() => {
-    el.style.outline = prevOutline;
-    el.style.transition = prevTransition;
+    style.outline = prevOutline;
+    style.transition = prevTransition;
   }, 2500);
 
   return true;
@@ -106,11 +108,11 @@ function start(): void {
               }
 
               renderCommentControls({
-                container: container as unknown as UiElement,
+                container,
                 comment,
                 analysis,
-                doc: document as unknown as UiDocument,
-                windowRef: window as unknown as UiWindow,
+                doc: asUiDocument(document),
+                windowRef: asUiWindow(window),
                 heartButtonSelector: adapter.commentAnchorSelector,
               });
             });
@@ -128,10 +130,10 @@ function start(): void {
           matches.forEach((el) => {
             if (el.dataset?.['noh8DraftButton'] === 'true') return;
             renderDraftReviewButton({
-              textarea: el as unknown as UiElement,
+              textarea: asUiElement(el),
               platform: adapter.platformName,
-              doc: document as unknown as UiDocument,
-              windowRef: window as unknown as UiWindow,
+              doc: asUiDocument(document),
+              windowRef: asUiWindow(window),
               analyze: inferComment,
               author: 'You',
             });

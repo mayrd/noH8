@@ -164,6 +164,28 @@ regardless of platform. Now fully per-platform via `src/content/ui/reportHelper.
 - [x] Updated **README** feature list and command reference.
 - [x] Verified Firefox packaging via `npm run package:firefox`.
 
+### M7 — DOM-boundary hardening *(tech debt, AGENTS.md §5)* ✅ DONE
+
+Eliminate every ad-hoc `as unknown as X` cast at the DOM boundary in `src/`.
+
+- [x] Move the structural `UiElement` / `UiDocument` / `UiWindow` interfaces to
+  `src/shared/uiTypes.ts` as the single source of truth, extended with the
+  adapter-facing members (`getAttribute`, `querySelectorAll`, `scrollIntoView`)
+  and widened `style`/`dataset` value types; `content/ui/uiTypes.ts` re-exports
+  them so existing UI import paths keep working.
+- [x] Consolidate the four duplicated per-adapter `ElementLike` definitions and
+  `selectorStrategy.ts`'s copy onto the shared `UiElement` type (local aliases
+  keep the existing names/exports).
+- [x] Make `CommentData.elementRef` structural (`UiElement`) so adapters assign
+  `elementRef: item` directly — four casts removed.
+- [x] Add `src/shared/domBridge.ts` (`asUiElement` / `asUiDocument` /
+  `asUiWindow`): the single documented unsafe seam for real-DOM → structural
+  crossings; `content/index.ts` now uses it instead of inline double casts.
+- [x] Acceptance: `tests/unit/domBoundary.test.ts` — an architecture guard that
+  fails if `as unknown as` / `as any` appears in any `src/` file other than the
+  bridge, plus identity-passthrough unit tests for the three bridge functions
+  (4 tests). Full suite green; `npm run check` clean.
+
 ---
 
 ## 6. Suggested Load Order for an AI Assistant

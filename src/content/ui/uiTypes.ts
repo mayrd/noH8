@@ -1,35 +1,16 @@
 import type { CommentAnalysis, CommentData } from '../../shared/types';
+import type {
+  UiDocument,
+  UiElement,
+  UiWindow,
+} from '../../shared/uiTypes';
 
 /**
- * Structural DOM interfaces. These keep the UI decoupled from the real
- * DOM so its logic can be unit tested in Node without jsdom.
+ * Structural DOM types live in `shared/uiTypes.ts` (single source of truth
+ * shared with the platform adapters); they are re-exported here so the UI
+ * modules keep their existing import paths.
  */
-export interface UiElement {
-  textContent: string | null;
-  /** For <textarea> elements — the current input value. Optional so the same
-   * interface also works for contenteditable elements that expose text via
-   * `textContent`. */
-  value?: string | null;
-  appendChild?(node: UiElement): void;
-  setAttribute?(name: string, value: string): void;
-  addEventListener?(type: string, listener: (event?: unknown) => void): void;
-  style?: Record<string, string>;
-  dataset?: Record<string, string>;
-  remove?(): void;
-  parentNode?: UiElement | null;
-  nextSibling?: UiElement | null;
-  insertBefore?(node: UiElement, ref: UiElement | null): void;
-  querySelector?(selector: string): UiElement | null;
-}
-
-export interface UiDocument {
-  createElement(tag: string): UiElement;
-  body: UiElement;
-}
-
-export interface UiWindow {
-  open(url: string, target?: string): void;
-}
+export type { UiDocument, UiElement, UiWindow } from '../../shared/uiTypes';
 
 export interface CommentControlsOptions {
   /** The comment DOM container the rainbow button is appended to. */

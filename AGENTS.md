@@ -143,4 +143,9 @@ Run everything through npm from the repo root. Node 20+ (repo tested on v24).
   is a possible future optimization.
 - `as unknown as X` casts at the DOM boundary (adapters, `content/index.ts`)
   couple the structural `UiElement`/`UiDocument`/`UiWindow` interfaces to real
-  DOM types. A thin wrapper or widened interfaces could eliminate these.
+  DOM types. **Resolved (M7):** structural types now live in
+  `src/shared/uiTypes.ts` (single source shared by UI modules and adapters,
+  `CommentData.elementRef` is structural), and every real-DOM → structural
+  crossing goes through the single documented seam `src/shared/domBridge.ts`.
+  `tests/unit/domBoundary.test.ts` guards against reintroducing ad-hoc double
+  casts anywhere in `src/` outside that seam.

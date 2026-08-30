@@ -1,10 +1,15 @@
+import type { UiElement } from './uiTypes';
+
 export interface CommentData {
   id: string;
   platform: 'youtube' | 'instagram' | 'facebook' | 'tiktok';
   author: string;
   text: string;
   timestamp?: string;
-  elementRef?: HTMLElement;
+  /** Structural reference to the comment's container element in the page DOM.
+   * Kept structural (see `shared/uiTypes.ts`) so adapters never need casts;
+   * real-DOM consumers cross the boundary via `shared/domBridge.ts`. */
+  elementRef?: UiElement;
 }
 
 export interface AnalysisResult {

@@ -15,14 +15,14 @@
  * zero containers.
  */
 
-export interface ElementLike {
-  textContent: string | null;
-  getAttribute?(name: string): string | null;
-  querySelector?(selector: string): ElementLike | null;
-  querySelectorAll(selector: string): ElementLike[] | NodeListOf<Element>;
-  appendChild?(node: ElementLike): void;
-  setAttribute?(name: string, value: string): void;
-}
+import type { UiElement } from '../../shared/uiTypes';
+
+/**
+ * Structural element type shared with the UI (single source of truth in
+ * `shared/uiTypes.ts`). Kept as a local alias so the selector-strategy API
+ * and adapter code keep reading naturally.
+ */
+export type ElementLike = UiElement;
 
 export interface RootLike {
   querySelectorAll(selector: string): ElementLike[] | NodeListOf<Element>;

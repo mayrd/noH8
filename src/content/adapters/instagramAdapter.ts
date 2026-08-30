@@ -11,14 +11,10 @@ import {
  * DOM so its logic can be unit tested in Node without jsdom. The real DOM
  * (`Element`, `Document`, `MutationObserver`) satisfies them structurally.
  */
-export interface ElementLike {
-  textContent: string | null;
-  getAttribute?(name: string): string | null;
-  querySelector?(selector: string): ElementLike | null;
-  querySelectorAll(selector: string): ElementLike[] | NodeListOf<Element>;
-  appendChild?(node: ElementLike): void;
-  setAttribute?(name: string, value: string): void;
-}
+import type { UiElement } from '../../shared/uiTypes';
+
+/** Structural element type — single source of truth in shared/uiTypes.ts. */
+export type ElementLike = UiElement;
 
 interface RootLike {
   querySelectorAll(selector: string): ElementLike[] | NodeListOf<Element>;
@@ -157,7 +153,7 @@ export default class InstagramAdapter extends BaseAdapter {
       platform: this.platformName,
       author,
       text,
-      elementRef: item as unknown as HTMLElement,
+      elementRef: item,
     };
   }
 
