@@ -3,6 +3,7 @@ import { useSettingsStore } from '../settings/settingsStore';
 import { getMatchesForPlatform } from '../content/platformConfig';
 import ModelManager from './ModelManager';
 import { resetLearnedCalibration } from '../offscreen/calibration';
+import { t } from '../shared/i18n';
 import type { Platform } from '../settings/types';
 
 const YOUTUBE_ICON: React.FC = () => (
@@ -51,7 +52,7 @@ const SettingsPage: React.FC = () => {
   const handleReset = () => {
     if (
       confirm(
-        'Reset all settings to defaults?\n\nThis will restore the default platform selection and model choice.'
+        t('settings.reset.confirm')
       )
     ) {
       resetToDefaults();
@@ -65,7 +66,7 @@ const SettingsPage: React.FC = () => {
   const handleResetCalibration = () => {
     if (
       confirm(
-        'Reset learned calibration?\n\nThis clears the flag-threshold adjustments NoH8 learned from your dismissed false positives. Your dismissal history is kept.'
+        t('settings.resetCalibration.confirm')
       )
     ) {
       void resetLearnedCalibration();
@@ -78,11 +79,11 @@ const SettingsPage: React.FC = () => {
     <div className="w-full min-h-screen bg-gray-50 text-gray-900 flex flex-col">
       {/* Page header */}
       <header className="bg-white border-b border-gray-200 px-8 py-6">
-        <h1 className="text-2xl font-bold text-gray-900">NoH8 Settings</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{t('settings.title')}</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Configure which platforms to scan and manage your on-device detection model.
+          {t('settings.subtitle')}
         </p>
-        <p className="text-xs text-gray-400 mt-1">{enabledCount}/4 platforms active</p>
+        <p className="text-xs text-gray-400 mt-1">{t('settings.platformsActive', { count: enabledCount })}</p>
       </header>
 
       {/* Main content */}
@@ -90,11 +91,9 @@ const SettingsPage: React.FC = () => {
         <div className="max-w-3xl mx-auto space-y-10">
           {/* Platforms section */}
           <section data-testid="platforms-section">
-            <h2 className="text-lg font-semibold text-gray-800 mb-1">Platforms</h2>
+            <h2 className="text-lg font-semibold text-gray-800 mb-1">{t('settings.section.platforms')}</h2>
             <p className="text-sm text-gray-500 mb-4">
-              Turn on the social platforms you want NoH8 to scan for hate speech. When
-              enabled for the first time, you'll be asked to grant permission to read those
-              sites.
+              {t('settings.platforms.desc')}
             </p>
 
             <div className="space-y-3">
@@ -114,7 +113,10 @@ const SettingsPage: React.FC = () => {
                           {meta.label}
                         </span>
                         <span className="text-xs text-gray-500 block mt-0.5">
-                          Scans {matches.length} origin{matches.length !== 1 ? 's' : ''}
+                          {t('settings.scansOrigins', {
+                            count: matches.length,
+                            plural: matches.length !== 1 ? 's' : '',
+                          })}
                         </span>
                       </div>
                     </div>
@@ -129,7 +131,7 @@ const SettingsPage: React.FC = () => {
                         type="checkbox"
                         checked={checked}
                         onChange={(e) => handleToggle(platform, e.target.checked)}
-                        aria-label={`Toggle ${meta.label} scanning`}
+                        aria-label={t('settings.toggleScanning', { platform: meta.label })}
                         className="sr-only peer"
                       />
                       <span
@@ -146,12 +148,12 @@ const SettingsPage: React.FC = () => {
 
           {/* Review own comment drafts section */}
           <section>
-            <h2 className="text-lg font-semibold text-gray-800 mb-1">Comment Handling</h2>
+            <h2 className="text-lg font-semibold text-gray-800 mb-1">{t('settings.section.handling')}</h2>
             <p className="text-sm text-gray-500 mb-4">
-              Optionally review your own comment drafts for harmful language before you post them.
+              {t('settings.handling.desc')}
             </p>
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-800">Review my own comment drafts</span>
+              <span className="text-sm font-medium text-gray-800">{t('settings.reviewDrafts')}</span>
               <label
                 className={`relative inline-flex items-center h-6 w-11 rounded-full cursor-pointer transition-colors ${
                   reviewOwnCommentDrafts ? 'bg-noh8-600' : 'bg-gray-300'
@@ -161,7 +163,7 @@ const SettingsPage: React.FC = () => {
                   type="checkbox"
                   checked={reviewOwnCommentDrafts}
                   onChange={(e) => setReviewOwnCommentDrafts(e.target.checked)}
-                  aria-label="Review own comment drafts"
+                  aria-label={t('settings.reviewDraftsAria')}
                   className="sr-only peer"
                 />
                 <span
@@ -186,13 +188,13 @@ const SettingsPage: React.FC = () => {
           onClick={handleReset}
           className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-noh8-500"
         >
-          Reset to Defaults
+          {t('settings.reset')}
         </button>
         <button
           onClick={handleResetCalibration}
           className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-noh8-500"
         >
-          Reset learned calibration
+          {t('settings.resetCalibration')}
         </button>
       </footer>
     </div>

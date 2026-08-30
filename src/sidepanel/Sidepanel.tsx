@@ -10,6 +10,7 @@ import { MSG } from '../shared/messages';
 import { buildReportUrl, PLATFORM_LABELS, type ReportPlatform } from '../content/ui/reportHelper';
 import { dismissFlaggedComment } from './flagStore';
 import { exportFlagsToJson, flagsExportFileName } from './flagExport';
+import { t } from '../shared/i18n';
 
 /** Opens the first-run welcome page in a new tab. */
 function openWelcomePage(): void {
@@ -19,11 +20,11 @@ function openWelcomePage(): void {
 }
 
 const ISSUE_OPTIONS: Array<{ value: IssueId | 'all'; label: string }> = [
-  { value: 'all', label: 'All Issues' },
-  { value: 'hate_speech', label: 'Hate Speech' },
-  { value: 'harassment', label: 'Harassment' },
-  { value: 'profanity', label: 'Profanity' },
-  { value: 'negative_tone', label: 'Negative Tone' },
+  { value: 'all', label: t('sidepanel.issue.all') },
+  { value: 'hate_speech', label: t('sidepanel.issue.hateSpeech') },
+  { value: 'harassment', label: t('sidepanel.issue.harassment') },
+  { value: 'profanity', label: t('sidepanel.issue.profanity') },
+  { value: 'negative_tone', label: t('sidepanel.issue.negativeTone') },
 ];
 
 export const Sidepanel: React.FC = () => {
@@ -79,7 +80,7 @@ export const Sidepanel: React.FC = () => {
       })) as { ok?: boolean; error?: string };
 
       if (!response?.ok) {
-        setJumpStatus((prev) => ({ ...prev, [comment.id]: 'Not visible on page' }));
+        setJumpStatus((prev) => ({ ...prev, [comment.id]: t('sidepanel.notVisible') }));
         setTimeout(() => {
           setJumpStatus((prev) => {
             const next = { ...prev };
@@ -89,7 +90,7 @@ export const Sidepanel: React.FC = () => {
         }, 3000);
       }
     } catch {
-      setJumpStatus((prev) => ({ ...prev, [comment.id]: 'Tab not ready' }));
+      setJumpStatus((prev) => ({ ...prev, [comment.id]: t('sidepanel.tabNotReady') }));
     }
   };
 
@@ -130,12 +131,12 @@ export const Sidepanel: React.FC = () => {
           <span className="text-xl">🌈</span>
           <div>
             <h1 className="font-bold text-base leading-none text-white">NoH8</h1>
-            <span className="text-xs text-slate-400">Dashboard</span>
+            <span className="text-xs text-slate-400">{t('sidepanel.dashboard')}</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
-            {displayedComments.length} flagged
+            {t('sidepanel.flaggedCount', { count: displayedComments.length })}
           </span>
         </div>
       </header>
@@ -152,7 +153,7 @@ export const Sidepanel: React.FC = () => {
             }`}
             onClick={() => setScope('page')}
           >
-            Current Page
+            {t('sidepanel.currentPage')}
           </button>
           <button
             type="button"
@@ -163,7 +164,7 @@ export const Sidepanel: React.FC = () => {
             }`}
             onClick={() => setScope('all')}
           >
-            All Pages ({comments.length})
+            {t('sidepanel.allPages', { count: comments.length })}
           </button>
         </div>
 
@@ -172,7 +173,7 @@ export const Sidepanel: React.FC = () => {
             value={filterIssue}
             onChange={(e) => setFilterIssue(e.target.value as IssueId | 'all')}
             className="flex-1 bg-slate-950 border border-slate-700 text-slate-200 rounded-md px-2 py-1 focus:outline-none focus:border-indigo-500"
-            aria-label="Filter issues"
+            aria-label={t('sidepanel.filterIssues')}
           >
             {ISSUE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -185,10 +186,10 @@ export const Sidepanel: React.FC = () => {
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as 'newest' | 'score')}
             className="bg-slate-950 border border-slate-700 text-slate-200 rounded-md px-2 py-1 focus:outline-none focus:border-indigo-500"
-            aria-label="Sort comments"
+            aria-label={t('sidepanel.sortComments')}
           >
-            <option value="newest">Newest</option>
-            <option value="score">Highest Score</option>
+            <option value="newest">{t('sidepanel.newest')}</option>
+            <option value="score">{t('sidepanel.highestScore')}</option>
           </select>
         </div>
       </div>
@@ -198,18 +199,18 @@ export const Sidepanel: React.FC = () => {
         {displayedComments.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400">
             <span className="text-3xl mb-2">🛡️</span>
-            <p className="font-semibold text-slate-200 text-sm">No flagged comments</p>
+            <p className="font-semibold text-slate-200 text-sm">{t('sidepanel.noFlagged')}</p>
             <p className="text-xs mt-1 text-slate-500">
               {scope === 'page'
-                ? 'No hate speech detected on this page yet.'
-                : 'Your review list is empty.'}
+                ? t('sidepanel.emptyPage')
+                : t('sidepanel.emptyAll')}
             </p>
             <button
               type="button"
               onClick={openWelcomePage}
               className="mt-4 px-4 py-2 text-xs font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-500 transition"
             >
-              Set up NoH8
+              {t('sidepanel.setUp')}
             </button>
           </div>
         ) : (
@@ -221,7 +222,7 @@ export const Sidepanel: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs font-semibold text-slate-300">
-                    {comment.author || 'Anonymous'}
+                    {comment.author || t('sidepanel.anonymous')}
                   </span>
                   <span className="text-[10px] text-slate-500 uppercase tracking-wider">
                     {PLATFORM_LABELS[comment.platform as ReportPlatform] || comment.platform}
@@ -261,21 +262,21 @@ export const Sidepanel: React.FC = () => {
                     onClick={() => void handleJump(comment)}
                     className="px-2.5 py-1 text-xs font-medium rounded-md bg-slate-800 hover:bg-slate-700 text-slate-200 transition"
                   >
-                    Jump
+                    {t('sidepanel.jump')}
                   </button>
                   <button
                     type="button"
                     onClick={() => void handleDismiss(comment)}
                     className="px-2.5 py-1 text-xs font-medium rounded-md bg-slate-800 hover:bg-slate-700 text-slate-400 transition"
                   >
-                    Dismiss
+                    {t('sidepanel.dismiss')}
                   </button>
                   <button
                     type="button"
                     onClick={() => handleReport(comment)}
                     className="px-2.5 py-1 text-xs font-medium rounded-md bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/30 transition"
                   >
-                    Report
+                    {t('sidepanel.report')}
                   </button>
                 </div>
               </div>
@@ -292,7 +293,7 @@ export const Sidepanel: React.FC = () => {
               onClick={() => void (scope === 'page' ? clearActiveComments() : clearAllComments())}
               className="text-slate-400 hover:text-rose-400 transition"
             >
-              Clear {scope === 'page' ? 'page flags' : 'all flags'}
+              {scope === 'page' ? t('sidepanel.clearPage') : t('sidepanel.clearAll')}
             </button>
             {comments.length > 0 && (
               <button
@@ -300,11 +301,11 @@ export const Sidepanel: React.FC = () => {
                 onClick={handleExport}
                 className="text-slate-400 hover:text-indigo-300 transition"
               >
-                Export JSON
+                {t('sidepanel.exportJson')}
               </button>
             )}
           </div>
-          <span className="text-slate-500 text-[11px]">100% on-device</span>
+          <span className="text-slate-500 text-[11px]">{t('sidepanel.onDevice')}</span>
         </footer>
     </div>
   );

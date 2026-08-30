@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSettingsStore } from '../settings/settingsStore';
 import { useModelStore } from '../settings/modelStore';
 import { needsOnboarding } from '../settings/onboarding';
+import { t } from '../shared/i18n';
 
 interface SettingsPopupProps {
   onOpenSettings: () => void;
@@ -31,7 +32,7 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ onOpenSettings, onOpenWel
           <h3 className="font-semibold text-gray-900 text-lg">NoH8</h3>
         </div>
         <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-          {enabledCount}/4 platforms
+          {t('popup.platformsEnabled', { count: enabledCount })}
         </span>
       </header>
 
@@ -42,14 +43,14 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ onOpenSettings, onOpenWel
           onClick={onOpenWelcome}
           className="w-full mb-4 px-4 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-500 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
         >
-          Set up NoH8
+          {t('sidepanel.setUp')}
         </button>
       )}
 
       {/* Flagged comments summary */}
       <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
         <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-600">Flagged Comments</span>
+          <span className="text-sm text-gray-600">{t('popup.flaggedComments')}</span>
           <span className="font-mono text-2xl font-bold text-red-600">{flaggedCount}</span>
         </div>
       </div>
@@ -59,13 +60,13 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ onOpenSettings, onOpenWel
         onClick={onOpenSettings}
         className="w-full px-4 py-2.5 text-sm font-medium text-white bg-noh8-600 rounded-lg hover:bg-noh8-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-noh8-500"
       >
-        Open Settings
+        {t('popup.openSettings')}
       </button>
 
       {/* Footer */}
       <div className="mt-4 pt-3 border-t border-gray-100">
         <p className="text-xs text-gray-400 text-center">
-          Privacy-first hate speech detection
+          {t('popup.tagline')}
         </p>
       </div>
     </div>

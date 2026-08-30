@@ -30,6 +30,11 @@ export interface ModalOptions {
   comment: CommentData;
   analysis: CommentAnalysis;
   windowRef?: UiWindow;
+  /**
+   * The element that opened the modal (e.g. the rainbow button). On close,
+   * keyboard focus is returned to it (M15 accessibility).
+   */
+  trigger?: UiElement;
 }
 
 export interface DraftReviewOptions {

@@ -19,7 +19,12 @@ messages over `chrome.runtime`:
 
 Shared contracts: data shapes in `src/shared/types.ts`; the messaging wire
 protocol in `src/shared/messages.ts`; platform identities/URLs in
-`src/settings/types.ts` and `src/content/platformConfig.ts`.
+`src/settings/types.ts` and `src/content/platformConfig.ts`. User-facing text
+lives in a typed locale catalog at `src/shared/i18n.ts` (en-first; locale
+resolved from `chrome.i18n.getUILanguage()` with no extra permissions), consumed
+by `content/ui`, the sidepanel, and the settings UI; injected DOM access is
+normalized through the structural seams in `src/shared/uiTypes.ts` and
+`src/shared/domBridge.ts`.
 
 ## 2. End-to-End Data Flow
 

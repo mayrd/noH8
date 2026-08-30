@@ -1,4 +1,5 @@
 import type { CommentData } from '../../shared/types';
+import { t } from '../../shared/i18n';
 import {
   buildReportUrl,
   reportActionLabel,
@@ -20,6 +21,15 @@ export function buildCommentReportUrl(
   return buildReportUrl(comment.platform, comment);
 }
 
+/**
+ * Close a modal overlay and return keyboard focus to the element that opened
+ * it (M15 accessibility).
+ */
+export function closeModal(overlay: UiElement, trigger?: UiElement): void {
+  overlay.remove?.();
+  if (trigger?.focus) trigger.focus();
+}
+
 /** Append a styled child element to a parent. */
 function append(parent: UiElement, child: UiElement): void {
   parent.appendChild?.(child);
@@ -33,9 +43,13 @@ function styles(el: UiElement, values: Record<string, string>): void {
 /**
  * Build the modal overlay that explains a comment's analysis. Returns the
  * overlay so callers/tests can keep a reference to it.
+ *
+ * Accessibility (M15): the card is `role="dialog"` + `aria-modal`, receives
+ * keyboard focus when opened, `Escape` closes it, and focus returns to the
+ * `trigger` on any close path.
  */
 export function openAnalysisModal(options: ModalOptions): UiElement {
-  const { doc, comment, analysis, windowRef } = options;
+  const { doc, comment, analysis, windowRef, trigger } = options;
 
   const overlay = doc.createElement('div');
   overlay.setAttribute?.('data-noh8-modal-overlay', 'true');
@@ -55,6 +69,11 @@ export function openAnalysisModal(options: ModalOptions): UiElement {
 
   const card = doc.createElement('div');
   card.setAttribute?.('data-noh8-modal', 'true');
+  if (card.dataset) card.dataset['noh8Modal'] = 'true';
+  card.setAttribute?.('role', 'dialog');
+  card.setAttribute?.('aria-modal', 'true');
+  card.setAttribute?.('aria-label', t('modal.ariaLabel'));
+  card.setAttribute?.('tabindex', '-1');
   styles(card, {
     position: 'relative',
     maxWidth: '420px',
@@ -84,7 +103,7 @@ export function openAnalysisModal(options: ModalOptions): UiElement {
   });
 
   const title = doc.createElement('span');
-  title.textContent = '🌈 NoH8 Comment Analysis';
+  title.textContent = t('modal.title');
   styles(title, {
     fontWeight: '700',
     fontSize: '16px',
@@ -98,7 +117,7 @@ export function openAnalysisModal(options: ModalOptions): UiElement {
   const closeBtn = doc.createElement('button');
   closeBtn.textContent = '✕';
   closeBtn.setAttribute?.('type', 'button');
-  closeBtn.setAttribute?.('aria-label', 'Close analysis');
+  closeBtn.setAttribute?.('aria-label', t('modal.close'));
   if (closeBtn.dataset) closeBtn.dataset['noh8Close'] = 'true';
   styles(closeBtn, {
     border: 'none',
@@ -110,7 +129,7 @@ export function openAnalysisModal(options: ModalOptions): UiElement {
     fontWeight: '700',
     color: '#333',
   });
-  closeBtn.addEventListener?.('click', () => overlay.remove?.());
+  closeBtn.addEventListener?.('click', () => closeModal(overlay, trigger));
   append(header, closeBtn);
   append(card, header);
 
@@ -130,24 +149,26 @@ export function openAnalysisModal(options: ModalOptions): UiElement {
   };
 
   // How sentiment is scored
-  section('How sentiment is scored');
+  section(t('modal.section.sentiment'));
   const scorePercent = Math.round(((analysis.sentiment.score + 1) / 2) * 100);
   const sentimentLine = doc.createElement('div');
-  sentimentLine.textContent = `${analysis.sentiment.label} · local score ${scorePercent}% on a scale of -1 (very negative) to +1 (very positive).`;
+  sentimentLine.textContent = t('modal.sentiment.line', {
+    label: analysis.sentiment.label,
+    percent: scorePercent,
+  });
   append(card, sentimentLine);
   const scoredBy = doc.createElement('div');
-  scoredBy.textContent =
-    'Sentiment is estimated entirely on-device from the balance of positive and negative words in the comment. Nothing is sent to a server.';
+  scoredBy.textContent = t('modal.sentiment.privacy');
   styles(scoredBy, { color: '#666', fontSize: '13px', marginTop: '4px' });
   append(card, scoredBy);
 
   // Hate speech status
-  section('Hate speech detection');
+  section(t('modal.section.hate'));
   const hateLine = doc.createElement('div');
   const hatePercent = Math.round(analysis.hateSpeechScore * 100);
   hateLine.textContent = analysis.isHateSpeech
-    ? `⚠ Flagged — ${hatePercent}% confidence.`
-    : `Not flagged (${hatePercent}% confidence).`;
+    ? t('modal.flagged', { percent: hatePercent })
+    : t('modal.notFlagged', { percent: hatePercent });
   styles(hateLine, {
     color: analysis.isHateSpeech ? '#b00020' : '#1a7f37',
     fontWeight: '600',
@@ -155,7 +176,7 @@ export function openAnalysisModal(options: ModalOptions): UiElement {
   append(card, hateLine);
 
   // Detected issues
-  section('Detected issues');
+  section(t('modal.section.issues'));
   if (analysis.issues.length > 0) {
     for (const detected of analysis.issues) {
       const row = doc.createElement('div');
@@ -167,7 +188,7 @@ export function openAnalysisModal(options: ModalOptions): UiElement {
         marginBottom: '6px',
       });
       const rowTitle = doc.createElement('div');
-      rowTitle.textContent = `• ${detected.label}`;
+      rowTitle.textContent = t('modal.issue.bullet', { label: detected.label });
       styles(rowTitle, { fontWeight: '600', color: '#b00020' });
       append(row, rowTitle);
       const rowDesc = doc.createElement('div');
@@ -178,7 +199,7 @@ export function openAnalysisModal(options: ModalOptions): UiElement {
     }
   } else {
     const none = doc.createElement('div');
-    none.textContent = 'No hate speech or other issues detected.';
+    none.textContent = t('modal.noIssues');
     styles(none, { color: '#1a7f37' });
     append(card, none);
   }
@@ -208,18 +229,26 @@ export function openAnalysisModal(options: ModalOptions): UiElement {
 
   // Privacy note
   const note = doc.createElement('div');
-  note.textContent = `This analysis ran 100% locally in your browser. For context on the sensitive words involved, tap ${reportActionLabel(
-    comment.platform
-  ).toLowerCase()}.`;
+  note.textContent = t('modal.privacy.note', {
+    report: reportActionLabel(comment.platform).toLowerCase(),
+  });
   styles(note, { color: '#888', fontSize: '12px', marginTop: '10px' });
   append(card, note);
 
   // Close when clicking the backdrop.
   overlay.addEventListener?.('click', (event) => {
     const target = event as { target?: UiElement };
-    if (target && target.target === overlay) overlay.remove?.();
+    if (target && target.target === overlay) closeModal(overlay, trigger);
+  });
+
+  // Keyboard path: Escape closes the modal (M15 accessibility). The card
+  // receives focus when opened so the keydown event reaches the overlay.
+  overlay.addEventListener?.('keydown', (event) => {
+    const key = (event as { key?: string } | undefined)?.key;
+    if (key === 'Escape') closeModal(overlay, trigger);
   });
 
   append(doc.body, overlay);
+  card.focus?.();
   return overlay;
 }

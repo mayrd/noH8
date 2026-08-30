@@ -40,6 +40,7 @@ NoH8 uses `Transformers.js` with ONNX WebAssembly/WebGPU to analyze social media
 - ✅ Concurrency-limited, deduplicating inference scheduler so comment bursts never overwhelm the pipeline
 - ✅ Chrome Manifest v3 extension with Firefox build path
 - ✅ First-run welcome page: privacy promise, per-platform toggles, and a one-click first model download (never shown twice)
+- ✅ Accessibility & i18n: ARIA `role`/`aria-label` semantics on injected buttons and the analysis modal, full keyboard path (`Escape` closes the modal and returns focus to the trigger), `prefers-reduced-motion` handling for the rainbow animation, and a typed single-source `i18n` catalog (`en`-first, locale resolved from `chrome.i18n.getUILanguage()` with no new permissions)
 
 ## On-device inference & model management
 NoH8 runs a `text-classification` model inside an **offscreen document** so the

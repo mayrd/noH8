@@ -14,6 +14,7 @@ export class FakeEl {
   textContent: string | null = null;
   value: string | null = null;
   removed = false;
+  focused = false;
   parent: FakeEl | null = null;
 
   /** Optional querySelector hook, set per-test when selector-based anchoring is exercised. */
@@ -65,6 +66,10 @@ export class FakeEl {
 
   remove(): void {
     this.removed = true;
+  }
+
+  focus(): void {
+    this.focused = true;
   }
 
   click(event?: unknown): void {

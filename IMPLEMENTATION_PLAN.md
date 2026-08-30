@@ -356,29 +356,31 @@ denounce it can be flagged, while sarcastic abuse in context can be missed.
       back-compat); heuristic context tests (quoted denial suppressed, plain
       abuse still flagged).
 
-### M15 — Accessibility & internationalization *(injected UI quality, reach)* ⬜ TODO
+### M15 — Accessibility & internationalization *(injected UI quality, reach)* ✅ DONE
 
 The injected rainbow buttons, warning banners, and modals are visual-only:
 no ARIA semantics, no keyboard path, and all strings are hard-coded English.
 
-- [ ] Injected UI: give every interactive element a role + `aria-label`
-      (analyze button, warning banner dismiss, modal controls), full keyboard
-      operability (Tab order, `Escape` closes the modal, focus returns to the
-      trigger), and `prefers-reduced-motion` handling for the rainbow
-      animation.
-- [ ] `src/shared/i18n.ts`: typed message catalog (`t(key, params?)`) with
+- [x] Injected UI: every interactive element has a role + `aria-label`
+      (`createRainbowButton`, `renderDraftReviewButton`, modal close/report
+      buttons); the modal card is `role="dialog"` + `aria-modal`; full keyboard
+      operability (`Escape` closes the modal, focus returns to the trigger on
+      every close path); and `prefers-reduced-motion` handling for the
+      rainbow animation via `injectRainbowMotionStyles` + `.noh8-rainbow-animated`.
+- [x] `src/shared/i18n.ts`: typed message catalog (`t(key, params?)`) with
       `en` as the source of truth; all user-facing strings in `content/ui`,
-      `sidepanel`, and `settings` move through it. Locale resolves from
-      `chrome.i18n.getUILanguage()` with `en` fallback — no new permissions.
-- [ ] Manifest `default_locale` + `_locales/en/messages.json` only if
-      chrome.i18n is adopted; otherwise the pure-TS catalog is the single
-      seam (decide during planning; do not do both).
-- [ ] Acceptance: `commentUi` test suites assert roles/labels/focus behavior
-      on the structural DOM; a keyboard-interaction test (`Escape` + focus
-      restore); an i18n unit suite (catalog completeness — every `t()` key
-      exists in `en`, param interpolation, fallback for missing locales); a
-      lint-style architecture test asserting no raw user-facing string
-      literals in the UI modules.
+      `sidepanel`, and `settings` route through it. Locale resolves from
+      `chrome.i18n.getUILanguage()` with an `en` fallback — no new permissions.
+- [x] Pure-TS catalog chosen as the single seam: `default_locale`/`_locales`
+      is deliberately NOT used, so the catalog in `src/shared/i18n.ts` is the
+      only source. `chrome.i18n.getUILanguage()` is consumed read-only.
+- [x] Acceptance: `tests/unit/injectedA11y.test.ts` asserts roles/labels/focus
+      + `Escape`/focus-restore; `tests/unit/i18n.test.ts` covers catalog
+      completeness (every key non-empty), param interpolation, unknown-key and
+      unknown-locale fallback, and `resolveLocale()` (chrome → `navigator` →
+      `en`); `tests/unit/i18nBoundary.test.ts` is the lint-style architecture
+      test asserting the i18n seam import + no raw `textContent` literals in
+      `content/ui`. `npm run check` green (typecheck + 303 tests + build).
 
 ---
 

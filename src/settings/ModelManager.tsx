@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { useModelStore, type ModelStatusId } from './modelStore';
 import { MODEL_CATALOG, type ModelDescriptor } from '../offscreen/modelCatalog';
 import { requestModelCommand } from '../offscreen/client';
+import { t } from '../shared/i18n';
 
 const STATUS_LABELS: Record<ModelStatusId, { label: string; className: string; icon: string }> = {
-  not_downloaded: { label: 'Not downloaded', className: 'bg-gray-100 text-gray-500', icon: '○' },
-  downloading: { label: 'Downloading…', className: 'bg-blue-100 text-blue-700', icon: '↻' },
-  ready: { label: 'Ready on device', className: 'bg-green-100 text-green-700', icon: '✓' },
-  error: { label: 'Download failed', className: 'bg-red-100 text-red-700', icon: '⚠' },
+  not_downloaded: { label: t('models.status.notDownloaded'), className: 'bg-gray-100 text-gray-500', icon: '○' },
+  downloading: { label: t('models.status.downloading'), className: 'bg-blue-100 text-blue-700', icon: '↻' },
+  ready: { label: t('models.status.ready'), className: 'bg-green-100 text-green-700', icon: '✓' },
+  error: { label: t('models.status.error'), className: 'bg-red-100 text-red-700', icon: '⚠' },
 };
 
 function statusFor(
@@ -47,13 +48,15 @@ const ModelManager: React.FC = () => {
         setNotice({
           modelId: model.id,
           kind: 'success',
-          text: `${model.name} downloaded successfully and is ready on-device.`,
+          text: t('models.download.success', { name: model.name }),
         });
       }
     } catch (error) {
-      const message = `Could not ${action} "${model.name}": ${String(
-        (error as Error)?.message ?? error
-      )}`;
+      const message = t('models.action.failed', {
+        action: t(`models.action.${action}` as 'models.action.download'),
+        name: model.name,
+        error: String((error as Error)?.message ?? error),
+      });
       setActionError(message);
       setNotice({ modelId: model.id, kind: 'error', text: message });
     } finally {
@@ -65,10 +68,9 @@ const ModelManager: React.FC = () => {
     <div data-testid="model-manager">
       {/* Section header */}
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-gray-800">Detection Model</h2>
+        <h2 className="text-lg font-semibold text-gray-800">{t('models.title')}</h2>
         <p className="text-sm text-gray-500 mt-1">
-          The machine-learning model used to analyse comments. It is downloaded once and runs
-          100% on-device. Delete models you no longer need to free up space.
+          {t('models.desc')}
         </p>
       </div>
 
@@ -107,7 +109,7 @@ const ModelManager: React.FC = () => {
                   <span className="flex-1">
                     <span className="text-sm font-medium text-gray-800 block">{model.name}</span>
                     <span className="text-xs text-gray-500 block mt-0.5">{model.description}</span>
-                    <span className="text-xs text-gray-400 block mt-0.5">Mode: {model.mode}</span>
+                    <span className="text-xs text-gray-400 block mt-0.5">{t('models.mode', { mode: model.mode })}</span>
                   </span>
                 </label>
 
@@ -124,7 +126,7 @@ const ModelManager: React.FC = () => {
               {status === 'downloading' && (
                 <div className="mt-4" data-testid={`progress-${model.id}`}>
                   <div className="flex justify-between text-xs text-gray-500 mb-1">
-                    <span>Downloading from Hugging Face…</span>
+                    <span>{t('models.downloadingFromHub')}</span>
                     <span>{downloadProgress[model.id] ?? 0}%</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
@@ -160,7 +162,7 @@ const ModelManager: React.FC = () => {
                     onClick={() => run('download', model)}
                     className="px-3 py-1.5 text-xs font-medium text-white bg-noh8-600 rounded-lg hover:bg-noh8-700 disabled:opacity-50 transition-colors"
                   >
-                    {isBusy ? 'Downloading…' : 'Download'}
+                    {isBusy ? t('models.status.downloading') : t('models.button.download')}
                   </button>
                 )}
                 {isDownloaded && (
@@ -171,7 +173,7 @@ const ModelManager: React.FC = () => {
                       onClick={() => run('refresh', model)}
                       className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition-colors"
                     >
-                      {isBusy ? 'Refreshing…' : 'Refresh'}
+                      {isBusy ? t('models.button.refreshing') : t('models.button.refresh')}
                     </button>
                     <button
                       type="button"
@@ -179,7 +181,7 @@ const ModelManager: React.FC = () => {
                       onClick={() => run('delete', model)}
                       className="px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 disabled:opacity-50 transition-colors"
                     >
-                      Delete
+                      {t('models.button.delete')}
                     </button>
                   </>
                 )}

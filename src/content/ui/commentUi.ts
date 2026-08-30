@@ -1,4 +1,6 @@
 import type { CommentAnalysis, CommentData } from '../../shared/types';
+import { t } from '../../shared/i18n';
+import { injectRainbowMotionStyles } from './motion';
 import { openAnalysisModal } from './analysisModal';
 import {
   RAINBOW_GRADIENT,
@@ -30,12 +32,14 @@ export function createRainbowButton(
   windowRef?: UiWindow
 ): UiElement {
   const button = doc.createElement('button');
+  injectRainbowMotionStyles(doc);
   button.setAttribute?.('data-noh8-rainbow', 'true');
   button.setAttribute?.('type', 'button');
   button.setAttribute?.(
     'aria-label',
-    `View NoH8 analysis for comment by ${comment.author}`
+    t('rainbowButton.label', { author: comment.author })
   );
+  button.setAttribute?.('class', 'noh8-rainbow-animated');
   if (button.dataset) button.dataset['noh8Rainbow'] = 'true';
   button.textContent = '🌈';
 
@@ -57,7 +61,7 @@ export function createRainbowButton(
   });
 
   button.addEventListener?.('click', () => {
-    openAnalysisModal({ doc, comment, analysis, windowRef });
+    openAnalysisModal({ doc, comment, analysis, windowRef, trigger: button });
   });
 
   return button;

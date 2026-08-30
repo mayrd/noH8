@@ -3,6 +3,7 @@ import { useSettingsStore } from './settingsStore';
 import { useModelStore } from './modelStore';
 import { requestModelCommand } from '../offscreen/client';
 import { markOnboarded } from './onboarding';
+import { t } from '../shared/i18n';
 import type { Platform } from './types';
 
 /**
@@ -18,10 +19,10 @@ import type { Platform } from './types';
 const PLATFORMS: Platform[] = ['youtube', 'instagram', 'facebook', 'tiktok'];
 
 const PLATFORM_DESCRIPTIONS: Record<Platform, string> = {
-  youtube: 'Analyze YouTube comment threads',
-  instagram: 'Analyze Instagram comments',
-  facebook: 'Analyze Facebook comments',
-  tiktok: 'Analyze TikTok comments',
+  youtube: t('welcome.desc.youtube'),
+  instagram: t('welcome.desc.instagram'),
+  facebook: t('welcome.desc.facebook'),
+  tiktok: t('welcome.desc.tiktok'),
 };
 
 export interface WelcomeProps {
@@ -56,18 +57,17 @@ export const Welcome: React.FC<WelcomeProps> = ({ onFinish }) => {
       <main className="w-full max-w-xl bg-slate-800/60 border border-slate-700 rounded-2xl p-8 space-y-6">
         <header className="space-y-2 text-center">
           <span className="text-4xl" aria-hidden="true">🌈</span>
-          <h1 className="text-2xl font-bold text-white">Welcome to NoH8</h1>
+          <h1 className="text-2xl font-bold text-white">{t('welcome.title')}</h1>
           <p className="text-sm text-slate-300 leading-relaxed">
-            NoH8 detects hate speech in social media comments in real time —
-            100% on your device. <strong className="text-slate-100">Nothing leaves your browser.</strong> No
-            servers, no accounts, no tracking.
+            {t('welcome.intro')}{' '}
+            <strong className="text-slate-100">{t('welcome.intro.strong')}</strong> {t('welcome.intro.tail')}
           </p>
         </header>
 
         {/* Step 1 — platforms & permissions */}
         <section aria-labelledby="welcome-platforms" className="space-y-3">
           <h2 id="welcome-platforms" className="text-sm font-semibold text-slate-200">
-            1. Choose platforms to protect
+            {t('welcome.step1')}
           </h2>
           <ul className="space-y-2">
             {PLATFORMS.map((platform) => (
@@ -100,14 +100,13 @@ export const Welcome: React.FC<WelcomeProps> = ({ onFinish }) => {
         {/* Step 2 — first model download */}
         <section aria-labelledby="welcome-model" className="space-y-2">
           <h2 id="welcome-model" className="text-sm font-semibold text-slate-200">
-            2. Get the detection model
+            {t('welcome.step2')}
           </h2>
           <p className="text-xs text-slate-400">
-            Downloads once from the Hugging Face Hub, then runs offline on-device.
-            Until it is ready a built-in keyword heuristic keeps analysis working.
+            {t('welcome.model.desc')}
           </p>
           {modelReady ? (
-            <p className="text-xs font-medium text-emerald-400">✓ Model is ready</p>
+            <p className="text-xs font-medium text-emerald-400">{t('welcome.model.ready')}</p>
           ) : (
             <button
               type="button"
@@ -115,7 +114,7 @@ export const Welcome: React.FC<WelcomeProps> = ({ onFinish }) => {
               disabled={downloadRequested}
               className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-500 disabled:opacity-60 transition"
             >
-              {downloadRequested ? 'Downloading…' : 'Download model'}
+              {downloadRequested ? t('welcome.model.downloading') : t('welcome.model.download')}
             </button>
           )}
         </section>
@@ -126,14 +125,14 @@ export const Welcome: React.FC<WelcomeProps> = ({ onFinish }) => {
             onClick={() => void complete()}
             className="text-sm text-slate-400 hover:text-slate-200 transition"
           >
-            Skip
+            {t('welcome.skip')}
           </button>
           <button
             type="button"
             onClick={() => void complete()}
             className="px-5 py-2.5 text-sm font-semibold text-white bg-noh8-600 rounded-lg hover:bg-noh8-700 transition"
           >
-            Get started
+            {t('welcome.getStarted')}
           </button>
         </footer>
       </main>

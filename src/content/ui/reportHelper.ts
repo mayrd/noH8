@@ -1,4 +1,5 @@
 import type { CommentData } from '../../shared/types';
+import { t } from '../../shared/i18n';
 
 /**
  * The platforms that ship a real on-device adapter. Kept in sync with
@@ -63,5 +64,5 @@ export const PLATFORM_LABELS: Record<ReportPlatform, string> = {
 
 /** Human-readable label for the report button, e.g. "Report on YouTube". */
 export function reportActionLabel(platform: ReportPlatform): string {
-  return `Report on ${PLATFORM_LABELS[platform]}`;
+  return t('report.action', { platform: PLATFORM_LABELS[platform] });
 }

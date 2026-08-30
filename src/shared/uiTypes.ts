@@ -21,6 +21,8 @@ export interface UiElement {
   style?: Record<string, string | undefined>;
   dataset?: Record<string, string | undefined>;
   remove?(): void;
+  /** Move keyboard focus to this element (modal open/close focus management). */
+  focus?(): void;
   parentNode?: UiElement | null;
   nextSibling?: UiElement | null;
   insertBefore?(node: UiElement, ref: UiElement | null): void;

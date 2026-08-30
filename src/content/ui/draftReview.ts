@@ -1,4 +1,6 @@
 import type { CommentData } from '../../shared/types';
+import { t } from '../../shared/i18n';
+import { injectRainbowMotionStyles } from './motion';
 import { openAnalysisModal } from './analysisModal';
 import {
   RAINBOW_GRADIENT,
@@ -29,12 +31,14 @@ export function renderDraftReviewButton(options: DraftReviewOptions): void {
   if (textarea.dataset) textarea.dataset['noh8DraftButton'] = 'true';
 
   const button = doc.createElement('button');
+  injectRainbowMotionStyles(doc);
   button.setAttribute?.('data-noh8-draft-rainbow', 'true');
   button.setAttribute?.('type', 'button');
   button.setAttribute?.(
     'aria-label',
-    `Review this comment draft with NoH8 (${author})`
+    t('draftReview.label', { author })
   );
+  button.setAttribute?.('class', 'noh8-rainbow-animated');
   if (button.dataset) button.dataset['noh8DraftRainbow'] = 'true';
   button.textContent = '🌈';
 
@@ -78,6 +82,6 @@ export function renderDraftReviewButton(options: DraftReviewOptions): void {
       text,
     };
 
-    openAnalysisModal({ doc, comment, analysis, windowRef });
+    openAnalysisModal({ doc, comment, analysis, windowRef, trigger: button });
   });
 }
