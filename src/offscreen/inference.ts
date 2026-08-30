@@ -1,4 +1,3 @@
-import { pipeline, env } from '@xenova/transformers';
 import type { CommentAnalysis } from '../shared/types';
 import {
   findModelDescriptor,
@@ -9,38 +8,19 @@ import {
 import { analyzeCommentText } from '../content/analysis/sentimentAnalyzer';
 import { modelStore } from '../settings/modelStore';
 import { MSG } from '../shared/messages';
+import { loadTransformers } from './transformersLoader';
 
 /**
  * On-device inference for NoH8, hosted inside the offscreen document.
  *
- * This is the only module that talks to Transformers.js. It keeps a singleton
- * pipeline per model, downloads models from the Hugging Face Hub on demand,
- * and exposes lifecycle helpers (download / delete / refresh) that the settings
- * UI drives through messaging.
+ * This is the only module that talks to Transformers.js — and it does so
+ * exclusively through `transformersLoader.ts`, which imports the library
+ * lazily (keeping the heavy onnxruntime bundle out of the entry chunk) and
+ * applies the MV3-CSP `env` configuration (remote models on, single-threaded
+ * non-proxied wasm). It keeps a singleton pipeline per model, downloads models
+ * from the Hugging Face Hub on demand, and exposes lifecycle helpers
+ * (download / delete / refresh) that the settings UI drives through messaging.
  */
-
-// Force remote model + wasm loading. `allowLocalModels = false` avoids any
-// attempt to read bundled local weights that we do not ship.
-env.allowRemoteModels = true;
-env.allowLocalModels = false;
-env.useBrowserCache = true;
-
-// Never run onnxruntime-web through a proxy/threaded web worker.
-//
-// By default onnxruntime-web sets `numThreads = min(4, cores/2)`. When
-// `numThreads > 1` it loads the *threaded* WASM build and spawns an Emscripten
-// pthread worker. That worker boots by `importScripts()`ing its bundled main
-// script, which onnxruntime-web hands over as a blob: URL. The MV3
-// extension_pages CSP ("script-src 'self' 'wasm-unsafe-eval'") forbids loading
-// scripts from blob: sources, so the worker dies with a NetworkError and every
-// model download / inference fails inside the offscreen document.
-//
-// Forcing `numThreads = 1` makes onnxruntime-web pick the single-threaded WASM
-// build (no pthread worker, no blob script), which runs cleanly under CSP.
-// `proxy = false` additionally blocks the separate blob-backed proxy-worker
-// path, so nothing is ever loaded from a blob: URL.
-env.backends.onnx.wasm.numThreads = 1;
-env.backends.onnx.wasm.proxy = false;
 
 /**
  * Download (and prime) a model. Updates the shared model status in storage so
@@ -166,6 +146,8 @@ async function getPipeline(
 ): Promise<TextClassifier> {
   const existing = PIPELINES.get(descriptor.id);
   if (existing) return existing;
+  // Lazy import: pulls the Transformers.js chunk in on first pipeline use.
+  const { pipeline } = await loadTransformers();
   const instance = (await pipeline(descriptor.task, descriptor.modelId, {
     ...(onProgress ? { progress_callback: onProgress } : {}),
   })) as TextClassifier;

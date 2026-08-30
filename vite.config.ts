@@ -69,6 +69,14 @@ export default defineConfig({
     crx({ manifest })
   ],
   build: {
+    // The only chunk that exceeds Vite's default 500 kB warning threshold is
+    // the lazily-imported `@xenova/transformers` + onnxruntime-web runtime
+    // (see src/offscreen/transformersLoader.ts). It is a separate dynamic-
+    // import chunk that is fetched only when the first model download or
+    // inference runs, so it never blocks offscreen-document startup. Splitting
+    // it further is not practical (onnxruntime-web is a single monolithic
+    // bundle), so raise the limit to keep the build output warning-free.
+    chunkSizeWarningLimit: 900,
     rollupOptions: {
       input: {
         popup: new URL('./popup.html', import.meta.url).pathname,

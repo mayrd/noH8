@@ -138,9 +138,12 @@ Run everything through npm from the repo root. Node 20+ (repo tested on v24).
   been resolved.
 - `src/content/index.ts` had a structural/boot bug (draft-review code orphaned
   outside the `.then()` chain) that was repaired; keep its boot flow covered.
-- Bundler warns about a >500 kB chunk (Transformers.js). Code-splitting the
-  offscreen pipeline (e.g. `manualChunks` or lazy-loading `@xenova/transformers`)
-  is a possible future optimization.
+- Bundler chunk size: **Resolved (M8).** `@xenova/transformers` is lazily
+  imported via `src/offscreen/transformersLoader.ts` (which also owns the
+  MV3-CSP `env` configuration), so the offscreen entry chunk is ~3 kB and the
+  runtime ships as a separate on-demand chunk;
+  `build.chunkSizeWarningLimit: 900` in `vite.config.ts` documents why the
+  large lazy chunk is acceptable.
 - `as unknown as X` casts at the DOM boundary (adapters, `content/index.ts`)
   couple the structural `UiElement`/`UiDocument`/`UiWindow` interfaces to real
   DOM types. **Resolved (M7):** structural types now live in

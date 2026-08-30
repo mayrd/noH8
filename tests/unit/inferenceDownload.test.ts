@@ -37,6 +37,7 @@ describe('downloadModel', () => {
 
   test('marks the model downloading then ready and forwards progress to the store', async () => {
     let progressCallback: ((e: { status?: string; progress?: number }) => void) | undefined;
+    let resolvePipeline!: (value: unknown) => void;
     pipelineMock.mockImplementation(
       (
         _task: string,
@@ -44,11 +45,18 @@ describe('downloadModel', () => {
         opts: { progress_callback?: (e: { status?: string; progress?: number }) => void }
       ) => {
         progressCallback = opts.progress_callback;
-        return Promise.resolve({});
+        // Hold the pipeline open so the in-flight state is observable.
+        return new Promise((resolve) => {
+          resolvePipeline = resolve;
+        });
       }
     );
 
     const downloadPromise = downloadModel('toxic-bert');
+
+    // The pipeline is now created behind the lazy Transformers.js import, so
+    // wait for the progress callback to be wired before asserting/streaming.
+    await vi.waitUntil(() => progressCallback !== undefined);
 
     expect(modelStore.getState().modelStatus['toxic-bert']).toBe('downloading');
     expect(modelStore.getState().downloadProgress['toxic-bert']).toBe(0);
@@ -58,6 +66,7 @@ describe('downloadModel', () => {
     progressCallback?.({ status: 'progress', progress: 73.6 });
     expect(modelStore.getState().downloadProgress['toxic-bert']).toBe(74);
 
+    resolvePipeline({});
     await downloadPromise;
 
     expect(modelStore.getState().modelStatus['toxic-bert']).toBe('ready');

@@ -186,6 +186,29 @@ Eliminate every ad-hoc `as unknown as X` cast at the DOM boundary in `src/`.
   bridge, plus identity-passthrough unit tests for the three bridge functions
   (4 tests). Full suite green; `npm run check` clean.
 
+### M8 — Lazy Transformers.js loading *(bundle-size tech debt, AGENTS.md §5)* ✅ DONE
+
+Kill the offscreen entry chunk bloat caused by the static
+`import { pipeline, env } from '@xenova/transformers'` in `inference.ts`
+(~818 kB entry chunk, Vite >500 kB warning).
+
+- [x] Add `src/offscreen/transformersLoader.ts`: a memoized, lazy dynamic
+  importer of `@xenova/transformers` that also owns the MV3-CSP `env`
+  configuration (remote models on, local off, browser cache on,
+  `numThreads = 1`, `proxy = false`) applied once on load; failed imports are
+  not cached (next call retries).
+- [x] `src/offscreen/inference.ts` now reaches Transformers.js only through
+  the loader; its static import and module-load-time env block are gone.
+- [x] Raise `build.chunkSizeWarningLimit` to 900 in `vite.config.ts` — the only
+  remaining >500 kB chunk is the deliberately lazy transformers runtime.
+- [x] Acceptance: `tests/unit/transformersLoader.test.ts` (lazy import +
+  env config, memoization across concurrent/sequential calls, retry after
+  failure), `tests/unit/lazyTransformersBoundary.test.ts` (architecture guard:
+  no static `@xenova/transformers` import in `inference.ts`, loader-only
+  access), updated `inferenceEnv.test.ts` (env config asserted through the
+  loader). Build: offscreen entry chunk 818 kB → ~3 kB; transformers in a
+  separate on-demand chunk; full `npm run check` green.
+
 ---
 
 ## 6. Suggested Load Order for an AI Assistant
