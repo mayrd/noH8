@@ -13,7 +13,7 @@ const manifest = defineManifest({
   manifest_version: 3,
   name: "NoH8",
   description: "Privacy-first hate speech detection directly in your browser",
-  version: "0.1.0",
+  version: "0.2.0",
   action: {
     default_popup: "popup.html",
     default_icon: {

@@ -36,6 +36,8 @@ NoH8 uses `Transformers.js` with ONNX WebAssembly/WebGPU to analyze social media
 - ✅ Multi-platform support: YouTube, Instagram, Facebook, TikTok
 - ✅ Sidepanel dashboard for live comment aggregation, issue filtering, and "Jump to comment"
 - ✅ Per-comment rainbow action buttons, detailed sentiment/issue modals, and draft review
+- ✅ False-positive dismissal (per-comment) and one-click JSON export of flagged comments
+- ✅ Concurrency-limited, deduplicating inference scheduler so comment bursts never overwhelm the pipeline
 - ✅ Chrome Manifest v3 extension with Firefox build path
 
 ## On-device inference & model management

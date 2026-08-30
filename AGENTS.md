@@ -17,7 +17,7 @@ browser.
 | UI | React 18 + Zustand v5 (stores) + Tailwind CSS v3 |
 | Build | Vite + [`@crxjs/vite-plugin`](https://crxjs.dev) (CRXJS) |
 | ML/inference | [`@xenova/transformers`](https://github.com/xenova/transformers.js) (Transformers.js) via ONNX WebAssembly/WebGPU in an **offscreen document** |
-| Tests | Vitest (35 files / 233 tests). jsdom only for `.tsx` component suites |
+| Tests | Vitest (36 files / 239 tests). jsdom only for `.tsx` component suites |
 | Packaging | `scripts/package-firefox.mjs`; GitHub Actions `release.yml` |
 
 ### Architecture in one paragraph

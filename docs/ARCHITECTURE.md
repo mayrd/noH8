@@ -89,7 +89,7 @@ flowchart TB
 - **`index.ts`** — boots all enabled platform adapters after hydrating the settings store; wires discovered comments to inference; renders controls and draft-review buttons; listens for `noh8:highlightComment` from the sidepanel.
 - **`platformConfig.ts`** — single source of per-platform host match patterns used to scope the manifest and runtime permissions.
 - **`adapters/`** — concrete platform adapters (`youtubeAdapter.ts`, `instagramAdapter.ts`, `facebookAdapter.ts`, `tiktokAdapter.ts`) extending `BaseAdapter`. `selectorStrategy.ts` provides fallback container selection.
-- **`analysis/`** — `inferenceClient.ts` (offscreen client wrapper) + `sentimentAnalyzer.ts` (deterministic keyword heuristic fallback).
+- **`analysis/`** — `inferenceClient.ts` (offscreen client wrapper), `inferenceScheduler.ts` (concurrency-capped, deduplicating, caching scheduler wrapping the client), and `sentimentAnalyzer.ts` (deterministic keyword heuristic fallback).
 - **`ui/`** — modularized UI layer:
   - `uiTypes.ts` — structural DOM and UI option interfaces.
   - `commentUi.ts` — entry point and rainbow button generator.
@@ -107,8 +107,9 @@ flowchart TB
 - **`client.ts`** — client messaging bridge towards the offscreen document.
 
 ### Sidepanel layer (`src/sidepanel/`)
-- **`flagStore.ts`** — Zustand store and `chrome.storage.local` persistence for flagged comment aggregation, live filtering, and storage listener synchronization.
-- **`Sidepanel.tsx`** — interactive dashboard for active-tab and global comment review with "Jump" and "Report" actions.
+- **`flagStore.ts`** — Zustand store and `chrome.storage.local` persistence for flagged comment aggregation, live filtering, false-positive dismissal (per-comment, persisted), and storage listener synchronization.
+- **`flagExport.ts`** — pure JSON export serialization of flagged comments (newest-first, DOM references stripped) for the dashboard's Export JSON action.
+- **`Sidepanel.tsx`** — interactive dashboard for active-tab and global comment review with "Jump", "Report", "Dismiss", and "Export JSON" actions.
 
 ### Settings layer (`src/settings/`)
 - **`settingsStore.ts`** (→ `chrome.storage.sync`) — enabled platforms, review drafts preference, and permissions.

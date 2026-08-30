@@ -21,7 +21,7 @@ All inference runs **100% locally on the client** via WebAssembly/WebGPU using
 * **State:** Zustand (`settingsStore`, `modelStore`)
 * **ML / On-Device NLP:** `@xenova/transformers` running in an **offscreen document** (ONNX wasm/WebGPU), plus a deterministic heuristic fallback
 * **DOM Observation:** `MutationObserver` + per-platform selector adapters
-* **Tests:** Vitest (14 suites / 77 tests currently passing)
+* **Tests:** Vitest (36 files / 239 tests currently passing)
 
 ---
 
@@ -255,15 +255,144 @@ unconditionally; re-scans re-inferred already-analysed comments.
   key, failure isolation, no caching of failures, `pendingCount`,
   `clearCache` (10 tests). Full `npm run check` green (233 tests).
 
+### M11 — Docs & release polish *(documentation, release hygiene)* ✅ DONE
+
+All functional milestones (T1–T6, M7–M10) shipped; the repository was ready for
+a first tagged release but the version lived in three drifting locations and
+the docs lagged behind M9/M10.
+
+- [x] Version bumped `0.1.0` → `0.2.0` in **all three** locations that must stay
+  in lockstep: `package.json`, `public/manifest.json`, and the `defineManifest()`
+  in `vite.config.ts` (the CRX plugin generates `dist/manifest.json` from it).
+- [x] `tests/unit/releaseVersion.test.ts` — release-gate suite: valid semver,
+  release version present in each of the three locations, three-way sync, and
+  version preservation through `buildFirefoxManifest`. Cutting a future release
+  means bumping `EXPECTED_VERSION` in this suite alongside the three files.
+- [x] README feature list now documents M9 (false-positive dismissal, JSON
+  export) and M10 (inference scheduling).
+- [x] `docs/ARCHITECTURE.md` module map covers `inferenceScheduler.ts`,
+  `flagExport.ts`, and the sidepanel Dismiss action.
+- [x] Firefox packaging verified: `npm run build` + `npm run package:firefox`
+  produce `dist-firefox/` with a correct transformed manifest (gecko settings,
+  background scripts, sidebar_action).
+- [x] Acceptance: `releaseVersion.test.ts` (6 tests) green; full `npm run check`
+  green; Firefox package inspected.
+
+### M12 — Onboarding & first-run experience *(UX, permissions flow)* ⬜ TODO
+
+NoH8 requires optional per-platform host permissions, but a fresh install drops
+the user into an empty state: no granted permissions, no model downloaded, and
+no explanation of what the extension does. First-run friction directly costs
+activation.
+
+- [ ] First-install welcome flow: on `chrome.runtime.onInstalled` (details.reason
+      === `install`), open a dedicated `welcome.html` page (new React surface
+      sharing the settings store).
+- [ ] Welcome page walks the user through: (1) what NoH8 does / privacy promise,
+      (2) toggling each platform — which triggers the existing
+      `src/permissions/` optional-permission request, (3) nudging a first model
+      download via the existing `modelStore`/`client.ts` command path.
+- [ ] Completion state persisted (`noh8_onboarded` in `chrome.storage.local`);
+      background setup skips re-opening the page once set.
+- [ ] Sidepanel / popup empty states link to the welcome page when nothing is
+      enabled or no model is ready.
+- [ ] Acceptance: unit tests for the onboarding flag helpers (set/get/skip
+      semantics), a `.tsx` suite for the welcome flow component (toggles invoke
+      the permission mock, completion persists the flag, "skip" also persists),
+      and a background-setup test that the welcome page opens only for
+      `install` reasons and only when not yet onboarded.
+
+### M13 — Local feedback calibration *(detection quality, privacy-preserving learning)* ⬜ TODO
+
+False-positive dismissals (M9) currently only hide comments. The user's
+corrections are a signal that should improve future scoring — without any
+server round-trip.
+
+- [ ] `src/offscreen/calibration.ts`: pure, DI-injected
+      `createCalibration({ storage, defaults })` that derives per-model
+      threshold adjustments from the persisted dismissal keys
+      (`noh8_dismissed_flags`): each local dismissal nudges the flag threshold
+      up by a small bounded step (clamped, e.g. +0.02 per dismissal, max +0.2),
+      converging instead of running away.
+- [ ] Calibration applies at result-ingestion time in the offscreen pipeline:
+      `CommentAnalysis` below the calibrated threshold is downgraded to
+      `not_flagged` (the raw score stays available for the modal).
+- [ ] Fully resettable: the settings page exposes "Reset learned calibration",
+      clearing only the derived thresholds (dismissal history is untouched).
+- [ ] No new permissions, no network, no telemetry — everything derives from
+      data already on the device.
+- [ ] Acceptance: unit tests for threshold derivation (monotonic, clamped,
+      converging steps, reset-to-defaults), an offscreen ingestion test that a
+      calibrated-below-threshold analysis is downgraded, and an architecture
+      guard test asserting `calibration.ts` imports no network modules.
+
+### M14 — Reply-thread & context analysis *(detection quality, adapters)* ⬜ TODO
+
+Comment-level classification ignores context: a reply quoting an insult to
+denounce it can be flagged, while sarcastic abuse in context can be missed.
+
+- [ ] Extend the adapter contract (`BaseAdapter.extractComments`) to populate a
+      `parentText?: string` / `depth?: number` on `CommentData` (see
+      `src/shared/types.ts` — extend the shared type, do not fork it). YouTube
+      reply threads and Instagram/Facebook nested-comment containers are the
+      first targets; TikTok may return flat results.
+- [ ] `inferenceScheduler` schedules parent-before-child where a parent exists,
+      so context inference is cached by the time the reply is scored.
+- [ ] Offscreen pipeline: context mode prepends the (truncated) parent text to
+      the model input and merges the two scores conservatively (flag if either
+      the reply alone or reply-with-context crosses the threshold).
+- [ ] Heuristic fallback (`sentimentAnalyzer.ts`) gains a context-aware rule set
+      mirroring the merge, with quoted-denial (`"re: <insult>"` quoting +
+      negation markers) suppressing the false positive.
+- [ ] Acceptance: adapter test matrix extended for `parentText`/`depth`
+      extraction; scheduler test for parent-before-child ordering; offscreen
+      merge tests (flag-either, truncate-oversized-parents, no-context
+      back-compat); heuristic context tests (quoted denial suppressed, plain
+      abuse still flagged).
+
+### M15 — Accessibility & internationalization *(injected UI quality, reach)* ⬜ TODO
+
+The injected rainbow buttons, warning banners, and modals are visual-only:
+no ARIA semantics, no keyboard path, and all strings are hard-coded English.
+
+- [ ] Injected UI: give every interactive element a role + `aria-label`
+      (analyze button, warning banner dismiss, modal controls), full keyboard
+      operability (Tab order, `Escape` closes the modal, focus returns to the
+      trigger), and `prefers-reduced-motion` handling for the rainbow
+      animation.
+- [ ] `src/shared/i18n.ts`: typed message catalog (`t(key, params?)`) with
+      `en` as the source of truth; all user-facing strings in `content/ui`,
+      `sidepanel`, and `settings` move through it. Locale resolves from
+      `chrome.i18n.getUILanguage()` with `en` fallback — no new permissions.
+- [ ] Manifest `default_locale` + `_locales/en/messages.json` only if
+      chrome.i18n is adopted; otherwise the pure-TS catalog is the single
+      seam (decide during planning; do not do both).
+- [ ] Acceptance: `commentUi` test suites assert roles/labels/focus behavior
+      on the structural DOM; a keyboard-interaction test (`Escape` + focus
+      restore); an i18n unit suite (catalog completeness — every `t()` key
+      exists in `en`, param interpolation, fallback for missing locales); a
+      lint-style architecture test asserting no raw user-facing string
+      literals in the UI modules.
+
+---
+
+## 6. Suggested Load Order for an AI Assistant
 ---
 
 ## 6. Suggested Load Order for an AI Assistant
 
-1. **T1** (YouTube → Facebook → TikTok) — unblocks the multi-platform mission and mirrors the already-shipped Instagram adapter as a template (its tests are the blueprint).
-2. **T2** — shared selector fallback, small and cross-cutting.
-3. **T4** — per-platform reporting; small, localized (`commentUi.ts` + a helper).
-4. **T3** — sidepanel dashboard; largest new surface, do after the adapters so there is real data to aggregate.
-5. **T5 / T6** — consistency, docs and release cleanup last.
+All of T1–T6 and M7–M11 are DONE. For the new work, recommended order:
+
+1. **M12** (onboarding) — self-contained UX surface; no pipeline changes, low
+   risk, immediate user-activation payoff.
+2. **M15** (a11y & i18n) — introduce the `i18n.ts` seam *before* M12–M14 add
+   more English string literals that would have to be migrated later.
+   (If you want to minimize rework above all else, do M15 first.)
+3. **M13** (calibration) — builds directly on M9's dismissal keys; small pure
+   module plus one ingestion hook.
+4. **M14** (thread context) — touches the shared `CommentData` type, adapter
+   contract, scheduler, and inference pipeline; largest blast radius, do last
+   and per-platform.
 
 For each task, start with: *"Write failing unit tests for the behaviour in
 [TASK], run `npm test` to confirm they fail, then implement until green."* Settings
