@@ -17,7 +17,7 @@ browser.
 | UI | React 18 + Zustand v5 (stores) + Tailwind CSS v3 |
 | Build | Vite + [`@crxjs/vite-plugin`](https://crxjs.dev) (CRXJS) |
 | ML/inference | [`@xenova/transformers`](https://github.com/xenova/transformers.js) (Transformers.js) via ONNX WebAssembly/WebGPU in an **offscreen document** |
-| Tests | Vitest (36 files / 239 tests). jsdom only for `.tsx` component suites |
+| Tests | Vitest (47 files / 376 tests). jsdom only for `.tsx` component suites |
 | Packaging | `scripts/package-firefox.mjs`; GitHub Actions `release.yml` |
 
 ### Architecture in one paragraph
@@ -105,8 +105,9 @@ Run everything through npm from the repo root. Node 20+ (repo tested on v24).
 | Regenerate PNG icons | `python3 scripts/generate-icons.py` |
 
 > **Always run `npm run check` before pushing.** It is the deterministic
-> gate: TypeScript must pass, all 172 tests must pass, and the production build
-> must succeed. The GitHub Actions `release.yml` test job runs the same command.
+> gate: TypeScript must pass, all tests must pass (47 files / 376 tests as of
+> M16), and the production build must succeed. The GitHub Actions `release.yml`
+> test job runs the same command.
 ---
 
 ## 4. Strict Boundaries (do not touch without permission)

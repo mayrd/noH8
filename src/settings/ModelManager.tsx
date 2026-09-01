@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useModelStore, type ModelStatusId } from './modelStore';
 import { MODEL_CATALOG, type ModelDescriptor } from '../offscreen/modelCatalog';
 import { requestModelCommand } from '../offscreen/client';
+import { classifyModelFailure, type ModelFailureKind } from './modelFailure';
 import { t } from '../shared/i18n';
 
 const STATUS_LABELS: Record<ModelStatusId, { label: string; className: string; icon: string }> = {
@@ -29,11 +30,20 @@ const ModelManager: React.FC = () => {
     useModelStore();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  /** (M16) Classified failure kind per model, shown with a retry affordance. */
+  const [failureKinds, setFailureKinds] = useState<Record<string, ModelFailureKind>>({});
   const [notice, setNotice] = useState<{
     modelId: string;
     kind: 'success' | 'error';
     text: string;
   } | null>(null);
+
+  // (M16) Nudge when the persisted selection no longer resolves in the catalog,
+  // instead of silently running the heuristic fallback forever.
+  const selectedModelIsStale =
+    selectedModelId !== null &&
+    selectedModelId !== undefined &&
+    !MODEL_CATALOG.some((model) => model.id === selectedModelId);
 
   const run = async (
     action: 'download' | 'refresh' | 'delete',
@@ -45,6 +55,10 @@ const ModelManager: React.FC = () => {
     try {
       await requestModelCommand(action, model.id);
       if (action === 'download') {
+        setFailureKinds((prev) => {
+          const { [model.id]: _cleared, ...rest } = prev;
+          return rest;
+        });
         setNotice({
           modelId: model.id,
           kind: 'success',
@@ -57,6 +71,10 @@ const ModelManager: React.FC = () => {
         name: model.name,
         error: String((error as Error)?.message ?? error),
       });
+      if (action === 'download') {
+        const kind = classifyModelFailure(error);
+        setFailureKinds((prev) => ({ ...prev, [model.id]: kind }));
+      }
       setActionError(message);
       setNotice({ modelId: model.id, kind: 'error', text: message });
     } finally {
@@ -73,6 +91,17 @@ const ModelManager: React.FC = () => {
           {t('models.desc')}
         </p>
       </div>
+
+      {/* M16: stale-model nudge — the persisted selection is no longer in the catalog. */}
+      {selectedModelIsStale && (
+        <p
+          data-testid="stale-model-warning"
+          role="alert"
+          className="mb-6 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3"
+        >
+          {t('models.staleSelected', { modelId: String(selectedModelId) })}
+        </p>
+      )}
 
       {/* Model cards */}
       <div className="space-y-4">
@@ -151,6 +180,31 @@ const ModelManager: React.FC = () => {
                 >
                   {notice.text}
                 </p>
+              )}
+
+              {/* M16: classified failure explanation + retry affordance */}
+              {status === 'error' && (
+                <>
+                  <p
+                    data-testid={`failure-${model.id}`}
+                    className="mt-4 text-xs text-red-700 bg-red-50 border border-red-200 rounded-lg p-2.5"
+                  >
+                    {t(`models.failure.${failureKinds[model.id] ?? 'unknown'}` as
+                      | 'models.failure.network'
+                      | 'models.failure.corrupt'
+                      | 'models.failure.quota'
+                      | 'models.failure.unknown')}
+                  </p>
+                  <button
+                    type="button"
+                    data-testid={`retry-${model.id}`}
+                    disabled={busyId !== null}
+                    onClick={() => run('download', model)}
+                    className="px-3 py-1.5 text-xs font-medium text-white bg-noh8-600 rounded-lg hover:bg-noh8-700 disabled:opacity-50 transition-colors"
+                  >
+                    {isBusy ? t('models.status.downloading') : t('models.button.retry')}
+                  </button>
+                </>
               )}
 
               {/* Action buttons */}

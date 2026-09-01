@@ -130,4 +130,32 @@ describe('ModelStore', () => {
     expect(state.selectedModelId).toBe('twitter-roberta');
     expect(state.downloadedModels).toContain('twitter-roberta');
   });
+
+  // --- M16: download-failure classification (transient, in-memory) ---
+
+  test('records a failure kind for a model (M16)', () => {
+    modelStore.getState().setModelFailure('toxic-bert', 'network');
+    expect(modelStore.getState().modelFailures['toxic-bert']).toBe('network');
+  });
+
+  test('clearing a failure removes the entry entirely (M16)', () => {
+    modelStore.getState().setModelFailure('toxic-bert', 'quota');
+    modelStore.getState().setModelFailure('toxic-bert', null);
+    expect(modelStore.getState().modelFailures).not.toHaveProperty('toxic-bert');
+  });
+
+  test('failures are transient UI state and never persisted to storage (M16)', () => {
+    // Trigger a real storage write, then record a failure (which must NOT write).
+    modelStore.getState().setSelectedModel('toxic-bert');
+    modelStore.getState().setModelFailure('toxic-bert', 'corrupt');
+    const write = localSet.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+    const snapshot = write[STORAGE_KEY] as Record<string, unknown>;
+    expect(snapshot).not.toHaveProperty('modelFailures');
+  });
+
+  test('marking a model downloaded clears any recorded failure (M16)', () => {
+    modelStore.getState().setModelFailure('toxic-bert', 'network');
+    modelStore.getState().markModelDownloaded('toxic-bert');
+    expect(modelStore.getState().modelFailures).not.toHaveProperty('toxic-bert');
+  });
 });

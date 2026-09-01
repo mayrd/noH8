@@ -12,6 +12,7 @@ import {
 } from '../content/analysis/threadContext';
 import { modelStore } from '../settings/modelStore';
 import { MSG } from '../shared/messages';
+import { recordInferenceHealth } from '../shared/inferenceHealth';
 import { loadTransformers } from './transformersLoader';
 import { calibrateAnalysis } from './calibration';
 
@@ -221,12 +222,18 @@ export async function analyzeComment(
     // a raw score below the calibrated threshold is downgraded to
     // not_flagged (the raw score stays available for the modal).
     const calibrated = await calibrateAnalysis({ ...merged, commentId }, modelId);
+    // (M16) Record a healthy inference so the sidepanel can clear its
+    // heuristic-fallback badge.
+    recordInferenceHealth({ fallbackActive: false, modelId, updatedAt: Date.now() });
     return { ...merged, ...calibrated, commentId };
   } catch (error) {
     console.warn(
       `[NoH8] model inference failed (${modelId}), using heuristic fallback:`,
       error
     );
+    // (M16) Record the fallback so the sidepanel badge makes the accuracy
+    // drop visible instead of silent.
+    recordInferenceHealth({ fallbackActive: true, modelId, updatedAt: Date.now() });
     return analyzeCommentText({ id: commentId, text, parentText });
   }
 }

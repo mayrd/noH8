@@ -21,7 +21,7 @@ All inference runs **100% locally on the client** via WebAssembly/WebGPU using
 * **State:** Zustand (`settingsStore`, `modelStore`)
 * **ML / On-Device NLP:** `@xenova/transformers` running in an **offscreen document** (ONNX wasm/WebGPU), plus a deterministic heuristic fallback
 * **DOM Observation:** `MutationObserver` + per-platform selector adapters
-* **Tests:** Vitest (36 files / 239 tests currently passing)
+* **Tests:** Vitest (47 files / 376 tests currently passing)
 
 ---
 
@@ -89,7 +89,7 @@ Compact status of shipped work (verified against the repo + passing tests).
 - [x] GitHub Actions: test workflow + release workflow (`latest` tag + GitHub Releases)
 
 **Test health**
-- [x] 14 Vitest suites / **77 tests passing** (run with `npm test`)
+- [x] Vitest suites / **376 tests passing** (run with `npm test`)
 
 ---
 
@@ -411,9 +411,6 @@ no ARIA semantics, no keyboard path, and all strings are hard-coded English.
 ---
 
 ## 6. Suggested Load Order for an AI Assistant
----
-
-## 6. Suggested Load Order for an AI Assistant
 
 All of T1–T6 and M7–M11 are DONE. For the new work, recommended order:
 
@@ -445,27 +442,46 @@ of this repo follow the strict TDD protocol in §7.
 
 ## Next Milestones (post-M14 roadmap)
 
-The M7–M15 arc is complete; the milestones below extend robustness, quality,
+The M7–M16 arc is complete; the milestones below extend robustness, quality,
 and usability on the same privacy-first constraints (no network beyond the
 sanctioned Hugging Face Hub model fetch, no telemetry, no new host origins
 without sign-off).
 
-### M16 — Offscreen health & model-download recovery *(robustness)* ⬜ TODO
+### M16 — Offscreen health & model-download recovery *(robustness)* ✅ DONE
 
-A failed or interrupted model download currently surfaces as a heuristic
-fallback with no recovery path in the UI.
+A failed or interrupted model download previously surfaced as a silent
+heuristic fallback with no recovery path in the UI.
 
-- [ ] Distinguish download-failure states in the model store (network error /
-      corrupted archive / quota) and expose a retry affordance in
-      `ModelManager.tsx` that re-runs `requestModelCommand('download', ...)`.
-- [ ] Surface a "model unavailable — running heuristic fallback" badge in the
-      sidepanel/popup when the last inference fell back, so the accuracy drop
-      is visible instead of silent.
-- [ ] Stale-model nudge: when the selected model id no longer resolves in
-      `modelCatalog.ts`, prompt a re-selection instead of silently falling back.
-- [ ] Acceptance: model-store state-machine tests for failure classes;
-      `ModelManager` retry interaction test; sidepanel badge test; no new
-      permissions and no network beyond the sanctioned Hugging Face Hub fetch.
+- [x] `src/settings/modelFailure.ts`: pure classifier mapping an unknown
+      download error to `network | corrupt | quota | unknown` from message
+      fragments.
+- [x] `modelStore`: `modelFailures` map + `setModelFailure(id, kind | null)`;
+      transient in-memory UI state (never persisted — the persisted `error`
+      status alone is enough to re-derive that a retry is possible).
+      `markModelDownloaded` clears any recorded failure.
+- [x] `ModelManager.tsx`: classified failure explanation per model and a
+      **Retry download** button that re-runs `requestModelCommand('download', …)`;
+      a stale-selection warning (`role="alert"`) appears when the persisted
+      `selectedModelId` no longer resolves in `MODEL_CATALOG`.
+- [x] `src/shared/inferenceHealth.ts`: local-only seam
+      (`chrome.storage.local` + `onChanged`, never synced, no network)
+      recording `{ fallbackActive, modelId, updatedAt }` for the last
+      inference. `offscreen/inference.ts` records `fallbackActive: false` on
+      model success and `true` in the heuristic-fallback catch path.
+- [x] `Sidepanel.tsx`: "Heuristic fallback — model unavailable" badge driven by
+      the health record (initial read + live subscription).
+- [x] Acceptance mapping: failure-kind classification →
+      `tests/unit/modelFailure.test.ts` (12); store state machine
+      (record/clear/never-persisted/cleared-on-success) →
+      `tests/unit/modelStore.test.ts` M16 block (4); retry interaction +
+      network/quota classification + stale-selection warning →
+      `tests/unit/ModelManager.test.tsx` M16 block (6); health-seam
+      round-trip/subscription/no-sync guard → `tests/unit/inferenceHealth.test.ts`
+      (6); fallback badge shown/hidden → `tests/unit/Sidepanel.test.tsx`
+      M16 block (2); offscreen records fallback on failure and clears on
+      success → `tests/unit/inferenceDownload.test.ts` M16 block (2).
+      No new permissions and no network beyond the sanctioned Hugging Face Hub
+      fetch. `npm run check` green (47 files / 376 tests + typecheck + build).
 
 ### M17 — Multi-model consensus *(detection quality)* ⬜ TODO
 

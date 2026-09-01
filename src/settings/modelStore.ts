@@ -1,6 +1,7 @@
 import { create, useStore } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import { DEFAULT_MODEL_ID } from '../offscreen/modelCatalog';
+import type { ModelFailureKind } from './modelFailure';
 
 /**
  * Client-side store for the on-device ML model the extension uses.
@@ -25,11 +26,19 @@ export interface ModelStorageState {
 }
 
 export interface ModelStore extends ModelStorageState {
+  /** (M16) Classified download failures keyed by model id. In-memory only. */
+  modelFailures: Record<string, ModelFailureKind>;
   setSelectedModel: (id: string) => void;
   markModelDownloaded: (id: string) => void;
   unmarkModelDownloaded: (id: string) => void;
   setModelStatus: (id: string, status: ModelStatusId) => void;
   setDownloadProgress: (id: string, percent: number) => void;
+  /**
+   * (M16) Record/clear the classified failure kind for a model. Transient,
+   * in-memory UI state only — never persisted (the persisted `error` status
+   * alone is enough to re-derive that a retry is possible after a reload).
+   */
+  setModelFailure: (id: string, kind: ModelFailureKind | null) => void;
 }
 
 export const DEFAULT_MODEL_STORAGE: ModelStorageState = {
@@ -67,13 +76,19 @@ export const createModelStore = () =>
   create<ModelStore>()(
     subscribeWithSelector((set, get) => ({
       ...DEFAULT_MODEL_STORAGE,
+      /** (M16) Classified download failures, keyed by model id. Not persisted. */
+      modelFailures: {} as Record<string, ModelFailureKind>,
       setSelectedModel: (id) => {
         set({ selectedModelId: id });
         writeStorage(get());
       },
       markModelDownloaded: (id) => {
-        if (get().downloadedModels.includes(id)) return;
-        set({ downloadedModels: [...get().downloadedModels, id] });
+        if (!get().downloadedModels.includes(id)) {
+          set({ downloadedModels: [...get().downloadedModels, id] });
+        }
+        // (M16) A successful download clears any recorded failure.
+        const { [id]: _cleared, ...remainingFailures } = get().modelFailures;
+        set({ modelFailures: remainingFailures });
         writeStorage(get());
       },
       unmarkModelDownloaded: (id) => {
@@ -89,6 +104,15 @@ export const createModelStore = () =>
       setDownloadProgress: (id, percent) => {
         set({ downloadProgress: { ...get().downloadProgress, [id]: percent } });
         writeStorage(get());
+      },
+      setModelFailure: (id, kind) => {
+        const next = { ...get().modelFailures };
+        if (kind === null) {
+          delete next[id];
+        } else {
+          next[id] = kind;
+        }
+        set({ modelFailures: next });
       },
     }))
   );

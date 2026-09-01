@@ -217,3 +217,45 @@ describe('Sidepanel Component', () => {
     );
   });
 });
+
+// --- M16: heuristic-fallback badge ---------------------------------------
+
+const { healthState } = vi.hoisted(() => ({
+  healthState: { fallbackActive: false, modelId: null as string | null, updatedAt: 0 },
+}));
+
+vi.mock('../../src/shared/inferenceHealth', () => ({
+  getInferenceHealth: vi.fn(async () =>
+    healthState.fallbackActive ? { ...healthState } : null
+  ),
+  subscribeInferenceHealth: vi.fn((cb: (h: unknown) => void) => {
+    if (healthState.fallbackActive) cb({ ...healthState });
+    return () => {};
+  }),
+}));
+
+describe('Sidepanel fallback badge (M16)', () => {
+  test('shows a badge when the last inference used the heuristic fallback', async () => {
+    setupMockChrome();
+    useFlagStore.setState({ comments: [] });
+    healthState.fallbackActive = true;
+    healthState.modelId = 'toxic-bert';
+
+    render(<Sidepanel />);
+
+    expect(await screen.findByTestId('fallback-badge')).toBeInTheDocument();
+    expect(screen.getByTestId('fallback-badge')).toHaveTextContent(/heuristic fallback/i);
+    healthState.fallbackActive = false;
+  });
+
+  test('shows no badge while the model pipeline is healthy', async () => {
+    setupMockChrome();
+    useFlagStore.setState({ comments: [] });
+    healthState.fallbackActive = false;
+
+    render(<Sidepanel />);
+
+    await screen.findByText(/no flagged comments/i);
+    expect(screen.queryByTestId('fallback-badge')).not.toBeInTheDocument();
+  });
+});

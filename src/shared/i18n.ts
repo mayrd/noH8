@@ -133,6 +133,21 @@ export const en = {
   'models.button.refresh': 'Refresh',
   'models.button.delete': 'Delete',
   'models.button.refreshing': 'Refreshing…',
+  'models.button.retry': 'Retry download',
+
+  // M16 — download-failure classification & recovery
+  'models.failure.network':
+    'Network problem while downloading. Check your connection and retry — the model comes from the Hugging Face Hub.',
+  'models.failure.corrupt':
+    'The downloaded model files look corrupted. Retry the download to fetch them again.',
+  'models.failure.quota':
+    'Browser storage quota reached. Delete an unused model below to free space, then retry.',
+  'models.failure.unknown': 'The download failed for an unexpected reason. Retry the download.',
+  'models.staleSelected':
+    'The selected model "{modelId}" is no longer available in the catalog. Please choose another model below.',
+
+  // M16 — sidepanel heuristic-fallback badge
+  'sidepanel.fallbackBadge': 'Heuristic fallback — model unavailable',
 } as const;
 
 /** All available locale catalogs. `en` is the source of truth. */

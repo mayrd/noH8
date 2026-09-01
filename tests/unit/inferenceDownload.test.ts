@@ -1,9 +1,19 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Mock chrome.storage.local so the model store can persist progress.
-const localSet = vi.fn((items: Record<string, unknown>, cb?: () => void) => cb?.());
+// Mock chrome.storage.local so the model store can persist progress and the
+// inference-health record can round-trip (M16).
+const localStore: Record<string, unknown> = {};
+const localSet = vi.fn((items: Record<string, unknown>, cb?: () => void) => {
+  Object.assign(localStore, items);
+  cb?.();
+});
 global.chrome = {
-  storage: { local: { get: vi.fn((_, cb) => cb({})), set: localSet } },
+  storage: {
+    local: {
+      get: vi.fn((_, cb) => cb({ ...localStore })),
+      set: localSet,
+    },
+  },
 } as any;
 
 // Mock the Transformers.js pipeline so we can drive progress + success/failure
@@ -105,5 +115,51 @@ describe('downloadModel', () => {
     expect(debug).toHaveBeenCalledWith(expect.stringContaining('50%'));
     expect(info.mock.calls.some((c) => String(c[0]).includes('ready'))).toBe(true);
     expect(error).not.toHaveBeenCalled();
+  });
+});
+
+// --- M16: inference-health recording (fallback badge source of truth) ---
+
+import { analyzeComment } from '../../src/offscreen/inference';
+import { getInferenceHealth } from '../../src/shared/inferenceHealth';
+
+describe('analyzeComment inference health (M16)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    pipelineMock = vi.fn();
+  });
+
+  test('records fallbackActive=true when the model pipeline fails', async () => {
+    pipelineMock.mockImplementation(() => Promise.reject(new Error('network unreachable')));
+
+    const analysis = await analyzeComment('hello world', 'c1');
+
+    // Heuristic fallback still produced an analysis...
+    expect(analysis.commentId).toBe('c1');
+    // ...and the fallback state is visible to the UI.
+    const health = await getInferenceHealth();
+    expect(health?.fallbackActive).toBe(true);
+    expect(health?.modelId).toBe(DEFAULT_MODEL_ID);
+  });
+
+  test('records fallbackActive=false after a successful model inference', async () => {
+    // Use a model whose pipeline is NOT cached from the download tests above
+    // (the toxic-bert cache entry is a plain object in this file's mock).
+    modelStore.setState({ selectedModelId: 'sst-2-english' });
+
+    // First inference fails to record the fallback state...
+    pipelineMock.mockImplementationOnce(() => Promise.reject(new Error('boom')));
+    await analyzeComment('hello world', 'c1');
+    expect((await getInferenceHealth())?.fallbackActive).toBe(true);
+
+    // ...then a successful run clears it. Note: `pipeline()` returns the
+    // classifier function itself, so mock that shape.
+    pipelineMock.mockImplementation(() =>
+      Promise.resolve(() => Promise.resolve([{ label: 'toxic', score: 0.9 }]))
+    );
+    await analyzeComment('hello world', 'c2');
+    expect((await getInferenceHealth())?.fallbackActive).toBe(false);
+
+    modelStore.setState({ selectedModelId: DEFAULT_MODEL_ID });
   });
 });

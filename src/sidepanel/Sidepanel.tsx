@@ -11,6 +11,11 @@ import { buildReportUrl, PLATFORM_LABELS, type ReportPlatform } from '../content
 import { dismissFlaggedComment } from './flagStore';
 import { exportFlagsToJson, flagsExportFileName } from './flagExport';
 import { t } from '../shared/i18n';
+import {
+  getInferenceHealth,
+  subscribeInferenceHealth,
+  type InferenceHealth,
+} from '../shared/inferenceHealth';
 
 /** Opens the first-run welcome page in a new tab. */
 function openWelcomePage(): void {
@@ -44,6 +49,19 @@ export const Sidepanel: React.FC = () => {
 
   const [scope, setScope] = useState<'page' | 'all'>('page');
   const [jumpStatus, setJumpStatus] = useState<Record<string, string>>({});
+  // (M16) Whether the last offscreen inference fell back to the heuristic —
+  // surfaced as a badge so the accuracy drop is visible instead of silent.
+  const [fallbackActive, setFallbackActive] = useState<boolean>(false);
+
+  useEffect(() => {
+    void getInferenceHealth().then((health: InferenceHealth | null) => {
+      setFallbackActive(health?.fallbackActive ?? false);
+    });
+    const unsubscribe = subscribeInferenceHealth((health) => {
+      setFallbackActive(health?.fallbackActive ?? false);
+    });
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     void initFlagStore();
@@ -135,6 +153,15 @@ export const Sidepanel: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          {fallbackActive && (
+            <span
+              data-testid="fallback-badge"
+              role="status"
+              className="px-2 py-0.5 text-xs font-semibold rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30"
+            >
+              {t('sidepanel.fallbackBadge')}
+            </span>
+          )}
           <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/30">
             {t('sidepanel.flaggedCount', { count: displayedComments.length })}
           </span>

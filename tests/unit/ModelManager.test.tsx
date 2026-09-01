@@ -124,4 +124,58 @@ describe('ModelManager', () => {
       /could not download.*network timeout/i
     );
   });
+
+  // --- M16: retry affordance, failure classification, stale-model nudge ---
+
+  test('shows a Retry button for a model whose download failed', () => {
+    storeState.modelStatus['sst-2-english'] = 'error';
+    render(<ModelManager />);
+    const card = screen.getByTestId('model-card-sst-2-english');
+    expect(within(card).getByTestId('retry-sst-2-english')).toBeInTheDocument();
+  });
+
+  test('retrying a failed download re-runs the download command', async () => {
+    requestModelCommand.mockResolvedValue(undefined);
+    storeState.modelStatus['sst-2-english'] = 'error';
+    const user = userEvent.setup();
+    render(<ModelManager />);
+    const card = screen.getByTestId('model-card-sst-2-english');
+    await user.click(within(card).getByTestId('retry-sst-2-english'));
+    expect(requestModelCommand).toHaveBeenCalledWith('download', 'sst-2-english');
+  });
+
+  test('classifies a network failure and surfaces the class alongside the error', async () => {
+    requestModelCommand.mockRejectedValue(new Error('fetch failed: network unreachable'));
+    storeState.modelStatus['sst-2-english'] = 'error';
+    const user = userEvent.setup();
+    render(<ModelManager />);
+    const card = screen.getByTestId('model-card-sst-2-english');
+    await user.click(within(card).getByRole('button', { name: 'Download' }));
+    expect(await screen.findByTestId('failure-sst-2-english')).toHaveTextContent(
+      /network problem/i
+    );
+  });
+
+  test('classifies a quota failure distinctly from a network failure', async () => {
+    requestModelCommand.mockRejectedValue(new Error('quota exceeded'));
+    storeState.modelStatus['sst-2-english'] = 'error';
+    const user = userEvent.setup();
+    render(<ModelManager />);
+    const card = screen.getByTestId('model-card-sst-2-english');
+    await user.click(within(card).getByRole('button', { name: 'Download' }));
+    expect(await screen.findByTestId('failure-sst-2-english')).toHaveTextContent(
+      /storage quota/i
+    );
+  });
+
+  test('warns when the selected model id no longer resolves in the catalog', () => {
+    storeState.selectedModelId = 'deleted-model-x';
+    render(<ModelManager />);
+    expect(screen.getByTestId('stale-model-warning')).toHaveTextContent(/deleted-model-x/);
+  });
+
+  test('shows no stale-model warning while the selected model is in the catalog', () => {
+    render(<ModelManager />);
+    expect(screen.queryByTestId('stale-model-warning')).not.toBeInTheDocument();
+  });
 });
