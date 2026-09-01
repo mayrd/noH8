@@ -5,6 +5,10 @@ import {
   selectCommentContainers,
   type CommentSelectors,
 } from './selectorStrategy';
+import {
+  findAncestorByTagName,
+  firstDescendantByTagName,
+} from './replyContext';
 
 /**
  * Structural DOM interfaces. These keep the adapter decoupled from the real
@@ -139,8 +143,42 @@ export default class YouTubeAdapter extends BaseAdapter {
       platform: this.platformName,
       author,
       text,
+      ...this.resolveReplyContext(item),
       elementRef: item,
     };
+  }
+
+  /**
+   * Resolve a reply's thread context (M14): when the comment element lives
+   * inside a `ytd-comment-thread-renderer` and is NOT the thread's top-level
+   * comment, the parent's id/text are resolved from the thread's first comment
+   * renderer (document order places the top-level comment before its replies).
+   */
+  private resolveReplyContext(
+    item: ElementLike
+  ): Pick<CommentData, 'parentId' | 'parentText' | 'depth'> {
+    const thread = findAncestorByTagName(item, COMMENT_PRIMARY_SELECTORS[0]);
+    if (!thread) return {};
+    const top = firstDescendantByTagName(thread, COMMENT_SECONDARY_SELECTORS[0]);
+    if (!top || top === item) return {};
+
+    const parentText =
+      this.queryAll(top, COMMENT_TEXT_SELECTOR)
+        .map((node) => (node.textContent ?? '').trim())
+        .find((candidate) => candidate.length > 0) ?? '';
+    if (!parentText) return {};
+
+    const parentId = this.resolveId(top, this.resolveAuthor(top), parentText);
+    return { parentId, parentText, depth: 1 };
+  }
+
+  /**
+   * True when the scanned container is a YouTube thread container (M14): a
+   * container that holds a top-level comment plus its replies. Elements
+   * without a tag name (e.g. in tests) are treated as plain comments.
+   */
+  private isThreadContainer(item: ElementLike): boolean {
+    return (item.tagName ?? '').toLowerCase() === COMMENT_PRIMARY_SELECTORS[0];
   }
 
   /** Parses the YouTube DOM for top-level and nested comments. */
@@ -150,8 +188,17 @@ export default class YouTubeAdapter extends BaseAdapter {
     const items = selectCommentContainers(this.root, YouTubeAdapter.selectors);
     const comments: CommentData[] = [];
     for (const item of items) {
-      const comment = this.parseComment(item);
-      if (comment) comments.push(comment);
+      if (this.isThreadContainer(item)) {
+        // Thread container: parse the top-level comment and each reply in
+        // document order so replies resolve their parent's context.
+        for (const renderer of this.queryAll(item, COMMENT_SECONDARY_SELECTORS[0])) {
+          const comment = this.parseComment(renderer);
+          if (comment) comments.push(comment);
+        }
+      } else {
+        const comment = this.parseComment(item);
+        if (comment) comments.push(comment);
+      }
     }
     return comments;
   }

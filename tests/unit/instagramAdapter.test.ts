@@ -190,3 +190,100 @@ test('extractComments parses comment text, author and element refs from the DOM'
     expect(adapter.commentAnchorSelector).toBeTruthy();
   });
 });
+// --- M14: nested reply context extraction (containment-based) ---
+
+interface TaggedFakeEl {
+  tagName?: string;
+  parentNode?: TaggedFakeEl | null;
+  querySelectorAll: (sel: string) => unknown[];
+  querySelector: (sel: string) => unknown;
+  getAttribute: (name: string) => string | null;
+  textContent: string | null;
+}
+
+function makeNestedComment(text: string, author: string): TaggedFakeEl {
+  const textNode: TaggedFakeEl = {
+    tagName: 'div',
+    querySelectorAll: () => [],
+    querySelector: () => null,
+    getAttribute: () => null,
+    textContent: text,
+  };
+  const authorNode: TaggedFakeEl = {
+    tagName: 'a',
+    querySelectorAll: () => [],
+    querySelector: () => null,
+    getAttribute: () => null,
+    textContent: author,
+  };
+  return {
+    tagName: 'ul',
+    parentNode: null,
+    querySelectorAll: (sel: string) => (sel === 'span[dir="auto"]' ? [textNode] : []),
+    querySelector: (sel: string) => (sel.startsWith('a[') ? authorNode : null),
+    getAttribute: () => null,
+    textContent: '',
+  };
+}
+
+describe('InstagramAdapter (nested replies, M14)', () => {
+  test('a nested reply carries its parent comment id, text and depth', () => {
+    const parent = makeNestedComment('parent says hi', 'parent_user');
+    const reply = makeNestedComment('nested reply', 'reply_user');
+    // Instagram nests replies inside the parent comment's container subtree.
+    const repliesWrapper: TaggedFakeEl = {
+      tagName: 'ul',
+      parentNode: null,
+      querySelectorAll: () => [],
+      querySelector: () => null,
+      getAttribute: () => null,
+      textContent: '',
+    };
+    reply.parentNode = repliesWrapper;
+    repliesWrapper.parentNode = parent as unknown as TaggedFakeEl;
+
+    const root = { querySelectorAll: () => [parent, reply] };
+    const adapter = new InstagramAdapter({ root: root as any });
+    const comments = adapter.extractComments();
+
+    expect(comments).toHaveLength(2);
+    expect(comments[0].text).toBe('parent says hi');
+    expect(comments[0].parentId).toBeUndefined();
+    expect(comments[0].depth).toBeUndefined();
+
+    expect(comments[1].text).toBe('nested reply');
+    expect(comments[1].parentId).toBe(comments[0].id);
+    expect(comments[1].parentText).toBe('parent says hi');
+    expect(comments[1].depth).toBe(1);
+  });
+
+  test('a reply to a reply increments depth (depth 2)', () => {
+    const parent = makeNestedComment('root comment', 'root_user');
+    const mid = makeNestedComment('mid reply', 'mid_user');
+    const leaf = makeNestedComment('leaf reply', 'leaf_user');
+
+    const midWrapper: TaggedFakeEl = {
+      tagName: 'ul', parentNode: null, querySelectorAll: () => [],
+      querySelector: () => null, getAttribute: () => null, textContent: '',
+    };
+    const leafWrapper: TaggedFakeEl = {
+      tagName: 'ul', parentNode: null, querySelectorAll: () => [],
+      querySelector: () => null, getAttribute: () => null, textContent: '',
+    };
+    mid.parentNode = midWrapper;
+    midWrapper.parentNode = parent as unknown as TaggedFakeEl;
+    leaf.parentNode = leafWrapper;
+    leafWrapper.parentNode = mid as unknown as TaggedFakeEl;
+
+    const root = { querySelectorAll: () => [parent, mid, leaf] };
+    const adapter = new InstagramAdapter({ root: root as any });
+    const comments = adapter.extractComments();
+
+    expect(comments).toHaveLength(3);
+    expect(comments[1].parentId).toBe(comments[0].id);
+    expect(comments[1].depth).toBe(1);
+    expect(comments[2].parentId).toBe(comments[1].id);
+    expect(comments[2].parentText).toBe('mid reply');
+    expect(comments[2].depth).toBe(2);
+  });
+});

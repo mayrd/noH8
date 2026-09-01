@@ -6,6 +6,25 @@ export interface CommentData {
   author: string;
   text: string;
   timestamp?: string;
+  /**
+   * (M14) Text of the parent comment in the thread, when this comment is a
+   * reply. Used to score the reply *with context* (the parent text is
+   * prepended to the model/heuristic input). Undefined for top-level
+   * comments and flat-thread platforms (e.g. TikTok).
+   */
+  parentText?: string;
+  /**
+   * (M14) Nesting depth in the comment thread: 0 for a top-level comment,
+   * 1 for a direct reply, 2 for a reply-to-a-reply, etc. Undefined when the
+   * platform or adapter doesn't expose depth.
+   */
+  depth?: number;
+  /**
+   * (M14) Stable id of this comment's parent, when this comment is a reply.
+   * Drives the scheduler's parent-before-child ordering (M14). Undefined for
+   * top-level comments.
+   */
+  parentId?: string;
   /** Structural reference to the comment's container element in the page DOM.
    * Kept structural (see `shared/uiTypes.ts`) so adapters never need casts;
    * real-DOM consumers cross the boundary via `shared/domBridge.ts`. */

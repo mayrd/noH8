@@ -10,6 +10,9 @@
  */
 export interface UiElement {
   textContent: string | null;
+  /** Lowercase tag name when the host element exposes one (real DOM elements
+   * do; used by reply-thread ancestor resolution, M14). */
+  tagName?: string;
   /** For <textarea> elements — the current input value. Optional so the same
    * interface also works for contenteditable elements that expose text via
    * `textContent`. */

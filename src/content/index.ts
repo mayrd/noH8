@@ -89,7 +89,14 @@ function start(): void {
             if (!container) continue;
             commentElementMap.set(comment.id, container);
 
-            scheduler.schedule({ commentId: comment.id, text: comment.text }).then((analysis) => {
+            scheduler.schedule({
+              commentId: comment.id,
+              text: comment.text,
+              // (M14) Thread context: parents are scheduled before their
+              // replies and the reply is scored with its parent's text.
+              parentText: comment.parentText,
+              parentId: comment.parentId,
+            }).then((analysis) => {
               if (!comment.elementRef) return; // comment detached while analysing
 
               if (analysis.isHateSpeech || analysis.issues.length > 0) {

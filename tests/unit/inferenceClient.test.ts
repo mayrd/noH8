@@ -40,11 +40,57 @@ describe('inferenceClient', () => {
     expect(result.issues).toHaveLength(0);
   });
 
-  test('falls back to the heuristic analyser when no runtime exists', async () => {
+    test('falls back to the heuristic analyser when no runtime exists', async () => {
     mockedRequestAnalyze.mockRejectedValueOnce(
       new Error('chrome.runtime unavailable')
     );
     const result = await inferComment(COMMENT);
     expect(result).toMatchObject({ commentId: 'c1', isHateSpeech: false });
+  });
+});
+
+describe('inferenceClient (thread context, M14)', () => {
+  test('forwards parentText to the offscreen pipeline for replies', async () => {
+    const modelResult = {
+      commentId: 'c1',
+      sentiment: { score: 0, label: 'neutral' as const },
+      isHateSpeech: false,
+      hateSpeechScore: 0,
+      issues: [],
+    };
+    mockedRequestAnalyze.mockResolvedValueOnce(modelResult);
+
+    await inferComment({ id: 'c1', text: 'reply text', parentText: 'parent text' });
+
+    expect(mockedRequestAnalyze).toHaveBeenCalledWith(
+      'reply text',
+      'c1',
+      'parent text'
+    );
+  });
+
+  test('omits parentText for top-level comments', async () => {
+    mockedRequestAnalyze.mockResolvedValueOnce({
+      commentId: 'c1',
+      sentiment: { score: 0, label: 'neutral' as const },
+      isHateSpeech: false,
+      hateSpeechScore: 0,
+      issues: [],
+    });
+
+    await inferComment({ id: 'c1', text: 'top-level' });
+    expect(mockedRequestAnalyze).toHaveBeenCalledWith('top-level', 'c1', undefined);
+  });
+
+  test('heuristic fallback receives parentText for context-aware scoring', async () => {
+    mockedRequestAnalyze.mockRejectedValueOnce(new Error('pipeline down'));
+
+    // Reply alone is clean; the parent carries a hate word → context path flags.
+    const result = await inferComment({
+      id: 'c1',
+      text: 'nice point indeed',
+      parentText: 'racists are evil',
+    });
+    expect(result.isHateSpeech).toBe(true);
   });
 });

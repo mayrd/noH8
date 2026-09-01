@@ -175,3 +175,115 @@ describe('YouTubeAdapter', () => {
     expect(adapter.extractComments()).toHaveLength(2);
   });
 });
+// --- M14: reply-thread context extraction ---
+
+interface TaggedFake {
+  tagName?: string;
+  parentNode?: TaggedFake | null;
+  querySelectorAll: (sel: string) => unknown[];
+  querySelector: (sel: string) => unknown;
+  getAttribute: (name: string) => string | null;
+  textContent: string | null;
+}
+
+/** A comment renderer fake with YouTube's text/author selectors wired up. */
+function makeRenderer(text: string, author: string): TaggedFake {
+  const textSpan: TaggedFake = {
+    tagName: '#span',
+    querySelectorAll: () => [],
+    querySelector: () => null,
+    getAttribute: () => null,
+    textContent: text,
+  };
+  const anchor: TaggedFake = {
+    tagName: '#a',
+    querySelectorAll: () => [],
+    querySelector: () => null,
+    getAttribute: () => null,
+    textContent: author,
+  };
+  return {
+    tagName: 'ytd-comment-renderer',
+    parentNode: null,
+    querySelectorAll: (sel: string) => (sel === '#content-text' ? [textSpan] : []),
+    querySelector: (sel: string) => (sel === '#author-text' ? anchor : null),
+    getAttribute: () => null,
+    textContent: '',
+  };
+}
+
+describe('YouTubeAdapter (reply threads, M14)', () => {
+  test('parses thread containers: top-level comment plus replies with parent context', () => {
+    const top = makeRenderer('parent comment text', 'parent_author');
+    const reply = makeRenderer('reply text', 'reply_author');
+    const thread: TaggedFake = {
+      tagName: 'ytd-comment-thread-renderer',
+      parentNode: null,
+      querySelectorAll: (sel: string) =>
+        sel === 'ytd-comment-renderer' ? [top, reply] : [],
+      querySelector: () => null,
+      getAttribute: () => null,
+      textContent: '',
+    };
+    // Structural parent chain: both renderers live inside the thread.
+    top.parentNode = thread;
+    reply.parentNode = thread;
+    const root = { querySelectorAll: () => [thread] };
+
+    const adapter = new YouTubeAdapter({ root: root as any });
+    const comments = adapter.extractComments();
+
+    expect(comments).toHaveLength(2);
+    const [parsedTop, parsedReply] = comments;
+
+    // Top-level: no thread context.
+    expect(parsedTop.text).toBe('parent comment text');
+    expect(parsedTop.parentId).toBeUndefined();
+    expect(parsedTop.parentText).toBeUndefined();
+    expect(parsedTop.depth).toBeUndefined();
+
+    // Reply: carries the parent's id and text for context analysis.
+    expect(parsedReply.text).toBe('reply text');
+    expect(parsedReply.parentId).toBe(parsedTop.id);
+    expect(parsedReply.parentText).toBe('parent comment text');
+    expect(parsedReply.depth).toBe(1);
+  });
+
+  test('resolves parent context for a reply discovered via the secondary (flat) path', () => {
+    const top = makeRenderer('the parent says something rude', 'parent_author');
+    const reply = makeRenderer('a reply', 'reply_author');
+    const thread: TaggedFake = {
+      tagName: 'ytd-comment-thread-renderer',
+      parentNode: null,
+      querySelectorAll: (sel: string) =>
+        sel === 'ytd-comment-renderer' ? [top, reply] : [],
+      querySelector: () => null,
+      getAttribute: () => null,
+      textContent: '',
+    };
+    // Attach the reply into the thread's parent chain (structural parentNode).
+    reply.parentNode = thread as unknown as TaggedFake;
+
+    // Secondary path: the scan yields the reply renderer directly.
+    const root = { querySelectorAll: (sel: string) => (sel.includes('comment-renderer') ? [reply] : []) };
+    const adapter = new YouTubeAdapter({ root: root as any });
+    const comments = adapter.extractComments();
+
+    expect(comments).toHaveLength(1);
+    expect(comments[0].text).toBe('a reply');
+    expect(comments[0].parentText).toBe('the parent says something rude');
+    expect(comments[0].depth).toBe(1);
+    expect(comments[0].parentId).toBeTruthy();
+  });
+
+  test('a top-level comment with no thread ancestor gets no parent context', () => {
+    const top = makeRenderer('standalone comment', 'someone');
+    const root = { querySelectorAll: () => [top] };
+    const adapter = new YouTubeAdapter({ root: root as any });
+    const comments = adapter.extractComments();
+    expect(comments).toHaveLength(1);
+    expect(comments[0].parentId).toBeUndefined();
+    expect(comments[0].parentText).toBeUndefined();
+    expect(comments[0].depth).toBeUndefined();
+  });
+});

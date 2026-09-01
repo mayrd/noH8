@@ -24,6 +24,11 @@ export interface AnalyzeRequest {
   type: typeof MSG.ANALYZE;
   text: string;
   commentId?: string;
+  /**
+   * (M14) Parent comment text to prepend to the model input so a reply is
+   * scored with conversational context. Omitted for top-level / flat comments.
+   */
+  parentText?: string;
 }
 
 export interface HighlightCommentRequest {

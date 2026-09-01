@@ -169,7 +169,7 @@ describe('inferenceScheduler', () => {
     expect(scheduler.pendingCount()).toBe(0);
   });
 
-  test('clearCache drops cached results so the next schedule re-infers', async () => {
+    test('clearCache drops cached results so the next schedule re-infers', async () => {
     const infer = vi.fn(async (input: InferInput) => analysisFor(input.commentId));
     const scheduler = createInferenceScheduler({ infer });
 
@@ -178,5 +178,89 @@ describe('inferenceScheduler', () => {
     scheduler.clearCache();
     await scheduler.schedule({ commentId: 'c1', text: 'hello' });
     expect(infer).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('inferenceScheduler (thread context, M14)', () => {
+  test('schedules the parent before its child even when the child is queued first', async () => {
+    const order: string[] = [];
+    const infer = vi.fn(async (input: InferInput) => {
+      order.push(input.commentId);
+      return analysisFor(input.commentId);
+    });
+    const scheduler = createInferenceScheduler({ infer, concurrency: 1 });
+
+    const childPromise = scheduler.schedule({
+      commentId: 'child',
+      text: 'reply text',
+      parentId: 'parent',
+    });
+    const parentPromise = scheduler.schedule({ commentId: 'parent', text: 'parent text' });
+
+    await Promise.all([childPromise, parentPromise]);
+    expect(order).toEqual(['parent', 'child']);
+  });
+
+  test('parent scheduled first: child runs after the parent', async () => {
+    const order: string[] = [];
+    const infer = vi.fn(async (input: InferInput) => {
+      order.push(input.commentId);
+      return analysisFor(input.commentId);
+    });
+    const scheduler = createInferenceScheduler({ infer, concurrency: 1 });
+
+    const parentPromise = scheduler.schedule({ commentId: 'parent', text: 'p' });
+    const childPromise = scheduler.schedule({
+      commentId: 'child',
+      text: 'c',
+      parentId: 'parent',
+    });
+
+    await Promise.all([parentPromise, childPromise]);
+    expect(order).toEqual(['parent', 'child']);
+  });
+
+  test('child whose parent is already cached is not deferred', async () => {
+    const order: string[] = [];
+    const infer = vi.fn(async (input: InferInput) => {
+      order.push(input.commentId);
+      return analysisFor(input.commentId);
+    });
+    const scheduler = createInferenceScheduler({ infer, concurrency: 1 });
+
+    // Parent runs and gets cached.
+    await scheduler.schedule({ commentId: 'parent', text: 'p' });
+    expect(order).toEqual(['parent']);
+
+    // Child scheduled after parent completed — must NOT block/defers.
+    const childPromise = scheduler.schedule({
+      commentId: 'child',
+      text: 'c',
+      parentId: 'parent',
+    });
+    await childPromise;
+    expect(order).toEqual(['parent', 'child']);
+  });
+
+  test('pendingCount includes a deferred child waiting on its parent', async () => {
+    const gate = deferred();
+    const infer = vi.fn((input: InferInput) =>
+      gate.promise.then(() => analysisFor(input.commentId))
+    );
+    const scheduler = createInferenceScheduler({ infer, concurrency: 1 });
+
+    const child = scheduler.schedule({ commentId: 'child', text: 'c', parentId: 'parent' });
+    // Parent not yet scheduled → child is deferred (waiting).
+    expect(scheduler.pendingCount()).toBe(1);
+
+    const parent = scheduler.schedule({ commentId: 'parent', text: 'p' });
+    expect(scheduler.pendingCount()).toBe(2);
+
+        gate.resolve();
+    await Promise.all([parent, child]);
+    // pendingCount drops to 0 only after the infer .finally handlers run,
+    // which happens a few microtasks after the schedule promises resolve.
+    await flushMicrotasks();
+    expect(scheduler.pendingCount()).toBe(0);
   });
 });

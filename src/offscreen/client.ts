@@ -37,13 +37,16 @@ function send<T>(request: NoH8Request): Promise<NoH8Response<T>> {
 /** Analyze a piece of text with the currently selected on-device model. */
 export async function requestAnalyze(
   text: string,
-  commentId?: string
+  commentId?: string,
+  parentText?: string
 ): Promise<CommentAnalysis> {
   const response = await send<CommentAnalysis>({
     requestId: nextRequestId(),
     type: MSG.ANALYZE,
     text,
     commentId,
+    // (M14) Reply-thread context: omitted for top-level / flat comments.
+    ...(parentText !== undefined ? { parentText } : {}),
   });
       if (response.ok) {
     return response.data;

@@ -1,3 +1,7 @@
+import {
+  truncateParentContext,
+  mergeCommentAnalyses,
+} from './threadContext';
 import type {
   CommentAnalysis,
   CommentData,
@@ -101,10 +105,12 @@ const ISSUE_CATALOG: Record<
 };
 
 /**
- * Analyze a single comment completely on-device. The returned payload is shown
- * in the per-comment NoH8 modal.
+ * Analyze a single comment completely on-device (base keyword heuristic, no
+ * thread context). The returned payload is shown in the per-comment NoH8
+ * modal. Extracted from `analyzeCommentText` so the context-aware entry point
+ * can reuse it for both the reply-alone and reply-with-context runs.
  */
-export function analyzeCommentText(
+function analyzeCommentTextBase(
   comment: Pick<CommentData, 'id' | 'text'>
 ): CommentAnalysis {
   const tokens = tokenize(comment.text);
@@ -142,7 +148,7 @@ export function analyzeCommentText(
   if (harassmentCount > 0) {
     issues.push(issue('harassment', ISSUE_CATALOG.harassment.label, ISSUE_CATALOG.harassment.description));
   }
-  if (profanityCount > 0) {
+    if (profanityCount > 0) {
     issues.push(issue('profanity', ISSUE_CATALOG.profanity.label, ISSUE_CATALOG.profanity.description));
   }
   if (sentiment.label === 'negative' && issues.length === 0) {
@@ -150,4 +156,69 @@ export function analyzeCommentText(
   }
 
   return { commentId: comment.id, sentiment, isHateSpeech, hateSpeechScore: hateScore, issues };
+}
+
+/** Negation / refutation markers that signal a *denial* rather than an agreement. */
+const DENIAL_MARKERS = new Set([
+  'no', 'not', 'nope', 'wrong', 'false', 'lie', 'lies', 'untrue', 'incorrect',
+  'disagree', 'absurd', 'nonsense', 'bogus', 'fake',
+]);
+
+/**
+ * Detect a quoted-denial: the parent turn contains an abusive term (the
+ * quoted insult) and the reply refutes it with a negation marker. Such a
+ * reply should NOT be flagged as hate speech merely because the insult word
+ * appears in the combined context — that is a false positive M14 suppresses.
+ */
+function isQuotedDenial(parentText: string, replyText: string): boolean {
+  const parentTokens = tokenize(parentText);
+  const replyTokens = tokenize(replyText);
+  const parentHasAbuse =
+    containsAny(parentTokens, HATE_WORDS) > 0 ||
+    containsAny(parentTokens, HARASSMENT_WORDS) > 0;
+  const replyExpressesDenial = containsAny(replyTokens, DENIAL_MARKERS) > 0;
+  return parentHasAbuse && replyExpressesDenial;
+}
+
+/**
+ * Drop a false-positive hate-speech flag while preserving the reply's other
+ * issue signals (harassment / profanity / negative tone still apply to the
+ * reply's own words).
+ */
+function downgradeFalsePositive(analysis: CommentAnalysis): CommentAnalysis {
+  return {
+    ...analysis,
+    isHateSpeech: false,
+    hateSpeechScore: 0,
+    issues: analysis.issues.filter((issue) => issue.id !== 'hate_speech'),
+  };
+}
+
+/**
+ * Context-aware heuristic analysis (M14).
+ *
+ * When a `parentText` is present, the reply is scored three ways and merged
+ * conservatively:
+ *  1. reply alone  — catches hate that stands on its own;
+ *  2. reply-with-context — catches abuse that only emerges when the parent
+ *     turn is prepended (e.g. a parent quote carrying the insult word);
+ *  3. quoted-denial suppression — if the parent quotes an insult and the reply
+ *     refutes it, the denial is treated as legitimate pushback, not re-stated
+ *     abuse, so a false-positive flag is downgraded.
+ *
+ * Without a `parentText` this is identical to the base keyword analyser.
+ */
+export function analyzeCommentText(
+  comment: Pick<CommentData, 'id' | 'text' | 'parentText'>
+): CommentAnalysis {
+  const base = analyzeCommentTextBase({ id: comment.id, text: comment.text });
+  if (!comment.parentText) return base;
+
+  if (isQuotedDenial(comment.parentText, comment.text)) {
+    return downgradeFalsePositive(base);
+  }
+
+  const contextText = truncateParentContext(comment.parentText) + ' ' + comment.text;
+  const withContext = analyzeCommentTextBase({ id: comment.id, text: contextText });
+  return mergeCommentAnalyses(base, withContext);
 }

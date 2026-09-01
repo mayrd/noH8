@@ -5,6 +5,7 @@ import {
   selectCommentContainers,
   type CommentSelectors,
 } from './selectorStrategy';
+import { findParsedAncestor, type ParsedCommentInfo } from './replyContext';
 
 /**
  * Structural DOM interfaces. These keep the adapter decoupled from the real
@@ -101,6 +102,8 @@ export default class InstagramAdapter extends BaseAdapter {
   private readonly documentRef: DocumentLike | null;
   private readonly MutationObserverCtor: MutationObserverCtor;
   private readonly commentElements = new Map<string, ElementLike>();
+  /** (M14) Already-parsed comments keyed by element, for reply-context resolution. */
+  private readonly parsedByElement = new Map<ElementLike, ParsedCommentInfo>();
   private mutationObserver: { disconnect(): void } | null = null;
 
   constructor(options: InstagramAdapterOptions = {}) {
@@ -148,11 +151,18 @@ export default class InstagramAdapter extends BaseAdapter {
     const id = this.resolveId(item, author, text);
     this.commentElements.set(id, item);
 
+    // M14: Instagram nests replies inside the parent comment's container
+    // subtree, so the nearest already-parsed enclosing element is the parent.
+    const parent = findParsedAncestor(item, this.parsedByElement);
+    const depth = parent ? parent.depth + 1 : undefined;
+    this.parsedByElement.set(item, { id, text, depth: depth ?? 0 });
+
     return {
       id,
       platform: this.platformName,
       author,
       text,
+      ...(parent ? { parentId: parent.id, parentText: parent.text, depth } : {}),
       elementRef: item,
     };
   }

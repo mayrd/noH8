@@ -332,29 +332,55 @@ server round-trip.
       (`tests/unit/calibration.test.ts` — 18 tests, plus 2 SettingsPage
       reset-calibration tests.) Full `npm run check` green.
 
-### M14 — Reply-thread & context analysis *(detection quality, adapters)* ⬜ TODO
+### M14 — Reply-thread & context analysis *(detection quality, adapters)* ✅ DONE
 
 Comment-level classification ignores context: a reply quoting an insult to
 denounce it can be flagged, while sarcastic abuse in context can be missed.
 
-- [ ] Extend the adapter contract (`BaseAdapter.extractComments`) to populate a
-      `parentText?: string` / `depth?: number` on `CommentData` (see
-      `src/shared/types.ts` — extend the shared type, do not fork it). YouTube
-      reply threads and Instagram/Facebook nested-comment containers are the
-      first targets; TikTok may return flat results.
-- [ ] `inferenceScheduler` schedules parent-before-child where a parent exists,
-      so context inference is cached by the time the reply is scored.
-- [ ] Offscreen pipeline: context mode prepends the (truncated) parent text to
-      the model input and merges the two scores conservatively (flag if either
-      the reply alone or reply-with-context crosses the threshold).
-- [ ] Heuristic fallback (`sentimentAnalyzer.ts`) gains a context-aware rule set
-      mirroring the merge, with quoted-denial (`"re: <insult>"` quoting +
-      negation markers) suppressing the false positive.
-- [ ] Acceptance: adapter test matrix extended for `parentText`/`depth`
-      extraction; scheduler test for parent-before-child ordering; offscreen
-      merge tests (flag-either, truncate-oversized-parents, no-context
-      back-compat); heuristic context tests (quoted denial suppressed, plain
-      abuse still flagged).
+- [x] Shared context-merge seam `src/content/analysis/threadContext.ts`:
+      `truncateParentContext` (500-char prefix cap on parent text) and
+      `mergeCommentAnalyses` (conservative flag-either merge: max score, issues
+      unioned/deduped by id, more-negative sentiment wins) — the single source
+      of merge semantics for BOTH the model path and the heuristic fallback.
+      `CommentData` extended with `parentText?` / `depth?` / `parentId?`
+      (`src/shared/types.ts`), `AnalyzeRequest` with `parentText?`
+      (`src/shared/messages.ts`), and `UiElement` with an optional structural
+      `tagName` (`src/shared/uiTypes.ts`).
+- [x] Adapter contract extended (no selector strings touched): new pure module
+      `src/content/adapters/replyContext.ts` resolves reply ancestors two ways
+      — `findAncestorByTagName` + `firstDescendantByTagName` for YouTube's
+      sibling-thread shape, and `findParsedAncestor` (containment walk over
+      already-parsed elements) for Instagram/Facebook nested containers.
+      `youtubeAdapter` now parses thread containers into top-level + replies
+      with `parentId`/`parentText`/`depth`; `instagramAdapter` and
+      `facebookAdapter` resolve nested replies via containment with
+      depth-chaining (reply-to-reply → depth 2); TikTok stays flat by design.
+- [x] `inferenceScheduler` schedules parent-before-child: a reply whose
+      `parentId` has not been scheduled yet is deferred (tracked in
+      `pendingChildren`, counted by `pendingCount`), released when the parent
+      is scheduled, and additionally enqueued directly after its parent in the
+      FIFO queue so parents always drain first. `SchedulableComment` carries
+      `parentText`/`depth`/`parentId`.
+- [x] Offscreen pipeline context mode (`analyzeComment`): for replies the model
+      runs twice — reply alone, then truncated-parent + reply — and the two
+      analyses are merged via `mergeCommentAnalyses` before calibration;
+      heuristic fallback receives `parentText` for the same semantics.
+- [x] Heuristic fallback (`sentimentAnalyzer.ts`): `analyzeCommentText` gains a
+      context-aware path — quoted-denial detection (parent carries an abusive
+      term + reply carries a negation marker) downgrades the false positive,
+      otherwise the reply-alone and reply-with-context runs merge
+      conservatively. No-context input is byte-identical to the old behaviour.
+- [x] Content-script wiring (`content/index.ts`) passes `parentText`/`parentId`
+      from the adapter's `CommentData` into the scheduler.
+- [x] Acceptance: `tests/unit/threadContext.test.ts` (11), heuristic context
+      tests in `sentimentAnalyzer.test.ts` (6), scheduler parent-before-child
+      + deferred-pendingCount tests (4), offscreen dual-run/merge/truncation
+      tests in `offscreenContext.test.ts` (6), wire-forwarding tests in
+      `offscreenClient.test.ts` + `inferenceClient.test.ts` (5),
+      `replyContext.test.ts` (9), and adapter matrix tests in
+      `youtubeAdapter.test.ts` (3) / `instagramAdapter.test.ts` (2) /
+      `facebookAdapter.test.ts` (1). Full `npm run check` green
+      (45 files / 350 tests + typecheck + production build).
 
 ### M15 — Accessibility & internationalization *(injected UI quality, reach)* ✅ DONE
 
@@ -415,3 +441,66 @@ of this repo follow the strict TDD protocol in §7.
 - [ ] Refactor for clarity without breaking tests; `npm run lint` clean.
 - [ ] Acceptance criteria for the task explicitly covered by a passing test.
 - [ ] State exactly which acceptance criteria map to which test before any push.
+---
+
+## Next Milestones (post-M14 roadmap)
+
+The M7–M15 arc is complete; the milestones below extend robustness, quality,
+and usability on the same privacy-first constraints (no network beyond the
+sanctioned Hugging Face Hub model fetch, no telemetry, no new host origins
+without sign-off).
+
+### M16 — Offscreen health & model-download recovery *(robustness)* ⬜ TODO
+
+A failed or interrupted model download currently surfaces as a heuristic
+fallback with no recovery path in the UI.
+
+- [ ] Distinguish download-failure states in the model store (network error /
+      corrupted archive / quota) and expose a retry affordance in
+      `ModelManager.tsx` that re-runs `requestModelCommand('download', ...)`.
+- [ ] Surface a "model unavailable — running heuristic fallback" badge in the
+      sidepanel/popup when the last inference fell back, so the accuracy drop
+      is visible instead of silent.
+- [ ] Stale-model nudge: when the selected model id no longer resolves in
+      `modelCatalog.ts`, prompt a re-selection instead of silently falling back.
+- [ ] Acceptance: model-store state-machine tests for failure classes;
+      `ModelManager` retry interaction test; sidepanel badge test; no new
+      permissions and no network beyond the sanctioned Hugging Face Hub fetch.
+
+### M17 — Multi-model consensus *(detection quality)* ⬜ TODO
+
+A single model is a single point of failure for both false positives and false
+negatives.
+
+- [ ] Allow selecting a secondary model in settings; when both are downloaded,
+      run consensus scoring (flag only if both agree; keep per-model scores in
+      the analysis modal).
+- [ ] Reuse the scheduler: consensus runs are two inferences per comment, so
+      the concurrency cap and cache must key on `commentId::text::modelId`.
+- [ ] Acceptance: consensus merge unit tests (agree/disagree/quorum),
+      scheduler cache-key test, settings tests for secondary-model selection.
+
+### M18 — On-device performance telemetry *(transparency, local-only)* ⬜ TODO
+
+M10 made scanning fast but invisible; users can't see what a scan costs.
+
+- [ ] Record per-comment inference latency and queue-wait in memory; persist a
+      rolling histogram to `chrome.storage.local` (local-only, never synced).
+- [ ] Surface a "Performance" section in settings (median/p95 latency, cache
+      hit rate) with a reset button.
+- [ ] Acceptance: histogram aggregation unit tests; storage round-trip test;
+      settings rendering test; architecture guard test asserting no
+      `chrome.storage.sync` and no network use in the telemetry module.
+
+### M19 — Settings search & keyboard shortcuts *(usability)* ⬜ TODO
+
+The settings page keeps growing (models, platforms, calibration, telemetry);
+finding a toggle is getting hard.
+
+- [ ] Filter-as-you-type search over settings sections (pure client-side
+      matching over the existing `src/shared/i18n.ts` catalog keys).
+- [ ] Keyboard shortcuts for common actions (open sidepanel, toggle platform)
+      via the `commands` API — requires a `public/manifest.json` change, so
+      coordinate per the boundaries in AGENTS.md before adding commands.
+- [ ] Acceptance: search unit tests (match, no-match, diacritics); shortcut
+      registration test against the manifest; `npm run check` green.

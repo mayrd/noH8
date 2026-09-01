@@ -69,3 +69,24 @@ describe('offscreen client', () => {
     );
   });
 });
+describe('offscreen client (thread context, M14)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    runtimeSend.mockImplementation((_msg: unknown, cb: (resp: unknown) => void) => {
+      cb({ ok: true, data: 'ok' });
+    });
+  });
+
+  test('requestAnalyze forwards parentText on the analyze request when provided', async () => {
+    await requestAnalyze('reply text', 'c1', 'parent text');
+    expect(lastRequest().type).toBe(MSG.ANALYZE);
+    expect(lastRequest().text).toBe('reply text');
+    expect(lastRequest().commentId).toBe('c1');
+    expect(lastRequest().parentText).toBe('parent text');
+  });
+
+  test('requestAnalyze omits parentText for top-level comments', async () => {
+    await requestAnalyze('top-level', 'c1');
+    expect(lastRequest().parentText).toBeUndefined();
+  });
+});

@@ -173,3 +173,57 @@ describe('FacebookAdapter', () => {
     expect(adapter.extractComments()).toHaveLength(2);
   });
 });
+// --- M14: nested reply context extraction (containment-based) ---
+
+interface TaggedFakeEl {
+  tagName?: string;
+  parentNode?: TaggedFakeEl | null;
+  querySelectorAll: (sel: string) => unknown[];
+  querySelector: (sel: string) => unknown;
+  getAttribute: (name: string) => string | null;
+  textContent: string | null;
+}
+
+describe('FacebookAdapter (nested replies, M14)', () => {
+  test('a nested reply carries its parent comment id, text and depth', () => {
+    const makeComment = (text: string): TaggedFakeEl => {
+      const textNode: TaggedFakeEl = {
+        tagName: 'div', querySelectorAll: () => [], querySelector: () => null,
+        getAttribute: () => null, textContent: text,
+      };
+      const authorNode: TaggedFakeEl = {
+        tagName: 'a', querySelectorAll: () => [], querySelector: () => null,
+        getAttribute: () => null, textContent: 'author',
+      };
+      return {
+        tagName: 'div',
+        parentNode: null,
+        querySelectorAll: (sel: string) => (sel === 'div[dir="auto"]' ? [textNode] : []),
+        querySelector: (sel: string) => (sel.includes('a[role="link"]') ? authorNode : null),
+        getAttribute: () => null,
+        textContent: '',
+      };
+    };
+
+    const parent = makeComment('parent comment body');
+    const reply = makeComment('nested reply body');
+    const wrapper: TaggedFakeEl = {
+      tagName: 'div', parentNode: null, querySelectorAll: () => [],
+      querySelector: () => null, getAttribute: () => null, textContent: '',
+    };
+    reply.parentNode = wrapper;
+    wrapper.parentNode = parent as unknown as TaggedFakeEl;
+
+    const root = { querySelectorAll: () => [parent, reply] };
+    const adapter = new FacebookAdapter({ root: root as any });
+    const comments = adapter.extractComments();
+
+    expect(comments).toHaveLength(2);
+    expect(comments[0].text).toBe('parent comment body');
+    expect(comments[0].parentId).toBeUndefined();
+    expect(comments[1].text).toBe('nested reply body');
+    expect(comments[1].parentId).toBe(comments[0].id);
+    expect(comments[1].parentText).toBe('parent comment body');
+    expect(comments[1].depth).toBe(1);
+  });
+});

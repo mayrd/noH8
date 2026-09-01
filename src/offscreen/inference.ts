@@ -6,6 +6,10 @@ import {
   type RawModelOutput,
 } from './modelCatalog';
 import { analyzeCommentText } from '../content/analysis/sentimentAnalyzer';
+import {
+  truncateParentContext,
+  mergeCommentAnalyses,
+} from '../content/analysis/threadContext';
 import { modelStore } from '../settings/modelStore';
 import { MSG } from '../shared/messages';
 import { loadTransformers } from './transformersLoader';
@@ -107,6 +111,7 @@ export async function handleOffscreenRequest(
     type: string;
     text?: string;
     commentId?: string;
+    parentText?: string;
     modelId?: string;
   }
 ): Promise<{ ok: boolean; data?: unknown; error?: string }> {
@@ -114,7 +119,11 @@ export async function handleOffscreenRequest(
     case MSG.ANALYZE:
       return {
         ok: true,
-        data: await analyzeComment(message.text ?? '', message.commentId ?? ''),
+        data: await analyzeComment(
+          message.text ?? '',
+          message.commentId ?? '',
+          message.parentText
+        ),
       };
     case MSG.DOWNLOAD:
       await downloadModel(message.modelId ?? '');
@@ -186,26 +195,38 @@ export async function analyzeWithModel(
 
 /**
  * Analyze text using the model currently selected in the settings store.
- * Falls back to the built-in heuristic analyser whenever the model pipeline
- * cannot be loaded or fails, so analysis never blocks the UI.
+ *
+ * M14 (thread context): when a reply's `parentText` is supplied, the model
+ * runs twice — once on the reply alone and once on the truncated parent
+ * prepended to the reply — and the two analyses are merged conservatively
+ * (flag if either crosses the threshold). Falls back to the built-in heuristic
+ * analyser (which applies the same context semantics) whenever the model
+ * pipeline cannot be loaded or fails, so analysis never blocks the UI.
  */
 export async function analyzeComment(
   text: string,
-  commentId: string
+  commentId: string,
+  parentText?: string
 ): Promise<CommentAnalysis> {
   const modelId = modelStore.getState().selectedModelId;
   try {
-    const result = await analyzeWithModel(text, modelId);
+    const replyAlone = await analyzeWithModel(text, modelId);
+    let merged = replyAlone;
+    if (parentText) {
+      const contextText = truncateParentContext(parentText) + ' ' + text;
+      const replyWithContext = await analyzeWithModel(contextText, modelId);
+      merged = mergeCommentAnalyses(replyAlone, replyWithContext);
+    }
     // M13: apply the locally-learned calibration at result-ingestion time —
     // a raw score below the calibrated threshold is downgraded to
     // not_flagged (the raw score stays available for the modal).
-    const calibrated = await calibrateAnalysis({ ...result, commentId }, modelId);
-    return { ...result, ...calibrated, commentId };
+    const calibrated = await calibrateAnalysis({ ...merged, commentId }, modelId);
+    return { ...merged, ...calibrated, commentId };
   } catch (error) {
     console.warn(
       `[NoH8] model inference failed (${modelId}), using heuristic fallback:`,
       error
     );
-    return analyzeCommentText({ id: commentId, text });
+    return analyzeCommentText({ id: commentId, text, parentText });
   }
 }

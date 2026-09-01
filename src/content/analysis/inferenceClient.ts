@@ -12,10 +12,10 @@ import { analyzeCommentText } from './sentimentAnalyzer';
  * scored and the page is never blocked.
  */
 export async function inferComment(
-  comment: Pick<CommentData, 'id' | 'text'>
+  comment: Pick<CommentData, 'id' | 'text' | 'parentText'>
 ): Promise<CommentAnalysis> {
   try {
-    const result = await requestAnalyze(comment.text, comment.id);
+    const result = await requestAnalyze(comment.text, comment.id, comment.parentText);
     return { ...result, commentId: comment.id };
   } catch {
     return analyzeCommentText(comment);
