@@ -508,10 +508,7 @@ M10 made scanning fast but invisible; users can't see what a scan costs.
       settings rendering test; architecture guard test asserting no
       `chrome.storage.sync` and no network use in the telemetry module.
 
-### M19 — Settings search & keyboard shortcuts *(usability)* ⬜ TODO
-
-The settings page keeps growing (models, platforms, calibration, telemetry);
-finding a toggle is getting hard.
+### M19 — Settings search & keyboard shortcuts *(usability)* — DEFERRED POST-LAUNCH ⬜
 
 - [ ] Filter-as-you-type search over settings sections (pure client-side
       matching over the existing `src/shared/i18n.ts` catalog keys).
@@ -520,3 +517,168 @@ finding a toggle is getting hard.
       coordinate per the boundaries in AGENTS.md before adding commands.
 - [ ] Acceptance: search unit tests (match, no-match, diacritics); shortcut
       registration test against the manifest; `npm run check` green.
+
+> **Deferred:** M17–M19 are quality-of-life features, not launch blockers —
+> see the Launch Readiness Roadmap (§8) below, which re-prioritizes the next
+> steps around the three user-critical flows and store submission.
+
+---
+
+## 8. Launch Readiness Roadmap (L-series) — refactored next steps
+
+> Refactor rationale (2026-09 review): M16 shipped the core detection,
+> dashboard, onboarding, calibration, a11y and i18n; the suite stands at
+> 47 files / 381 tests green. What is missing for an *official launch* is
+> (a) real-platform verification of the three user-critical flows
+> (read/analyse, report, draft review), (b) store-submission hygiene
+> (Chrome Web Store + Firefox AMO), and (c) user-facing docs/policy. All
+> launch-blocking work lives here; M17–M19 are deferred to §8.6.
+
+### L1 — Live-platform verification harness *(launch blocker)* ⬜ TODO
+
+All adapter/modal/draft tests run against fake DOMs, so live selector drift is
+only caught manually. Every platform×flow cell in the matrix (§8.5) must be
+verified against the **live site** on Chrome and Firefox and recorded in
+`docs/PLATFORM_VERIFICATION.md` (new file: date, browser, version, platform,
+flow, pass/fail, selector-drift notes).
+
+- [ ] Add a `verify` script that prints the §8.5 matrix as a checklist (no
+      network beyond the visited page itself).
+- [ ] For each failing cell, file a selector-drift fix through
+      `selectorStrategy.ts` secondary selectors — never weaken existing
+      adapter assertions; add fixtures mirroring the new live DOM.
+- [ ] Acceptance: `docs/PLATFORM_VERIFICATION.md` complete for all GA cells;
+      any selector change ships with a new fixture test in that platform's
+      adapter suite (RED→GREEN).
+
+### L2 — Reporting flow hardening *(launch blocker)* ⬜ TODO
+
+`reportHelper.ts` currently deep-links only to generic help/policy pages (no
+platform offers a stable comment-level report URL — documented limitation).
+Make the flow complete and testable per platform.
+
+- [ ] Evidence-snippet copy: "Report" in the analysis modal first copies a
+      structured snippet (comment text, author, platform, NoH8 score) to the
+      clipboard via a thin injectable `navigator.clipboard` seam (no new
+      permissions), then opens the platform report URL in a new tab with
+      `target="_blank" rel="noopener noreferrer"`.
+- [ ] Sidepanel parity: the dashboard card's Report action must import
+      `buildReportUrl` from `content/ui/reportHelper.ts` (single source —
+      delete any duplicate mapping).
+- [ ] Removed-comment handling: reporting a comment whose element left the DOM
+      still resolves the URL from the persisted `platform` field.
+- [ ] Acceptance: extend `reportHelper.test.ts` (snippet format, clipboard seam
+      invoked, `rel="noopener"` attribute, per-platform URL matrix unchanged);
+      new `Sidepanel.test.tsx` block asserting the dashboard Report button uses
+      `buildReportUrl` for all four platforms; new i18n keys with
+      catalog-completeness tests.
+
+### L3 — Draft-review composer coverage *(launch blocker)* ⬜ TODO
+
+Draft review works generically (`draftReview.ts`), but composer discovery and
+lifecycle are per-platform and under-tested.
+
+- [ ] Per-adapter composer observation: each adapter's `observe()` also watches
+      for elements matching its `commentTextareaSelector` so SPA re-renders
+      yield exactly one review button per composer.
+- [ ] Pre-post warning state: when a draft analysis is `flagged`, the modal
+      shows the warning banner, and the review button reflects "draft flagged"
+      until the text is re-analysed as clean.
+- [ ] Empty-draft handling: clicking review with an empty composer shows the
+      i18n "nothing to review" note instead of analysing an empty string.
+- [ ] Acceptance: composer-observation tests per adapter (extend the existing
+      `commentTextareaSelector` blocks to observer wiring);
+      `draftReview.test.ts` blocks for empty-draft + flagged-state styling;
+      a11y block in `injectedA11y.test.ts` for the warning state.
+
+### L4 — Store submission & release hygiene *(launch blocker)* ⬜ TODO
+
+- [ ] Chrome Web Store: zip `dist/`; verify `public/manifest.json` matches
+      `vite.config.ts` `defineManifest()`; single-purpose description; scoped
+      `host_permissions` match the listing.
+- [ ] Firefox AMO: `npm run package:firefox`; verify via
+      `firefoxManifest.test.ts`; add listing screenshots.
+- [ ] Privacy disclosure derived from `docs/ARCHITECTURE.md` §4 (local-only;
+      only network use is the Hugging Face model fetch; no telemetry; no sync
+      of analysis data).
+- [ ] Release gate: bump `EXPECTED_VERSION` in `tests/unit/releaseVersion.test.ts`
+      together with the three version locations (0.2.0 → 1.0.0 for launch).
+- [ ] Acceptance: `npm run check` green; `releaseVersion.test.ts` updated and
+      passing; `docs/LAUNCH_CHECKLIST.md` ticked.
+
+### L5 — User-facing docs & support path *(pre-launch, non-blocking if timeboxed)* ⬜ TODO
+
+- [ ] README quick-start rewrite (install → welcome flow → first scan).
+- [ ] "How reporting works" section (official report entry points + local
+      evidence copy).
+- [ ] Known-limitations page: selector drift (L1), heuristic-fallback badge
+      meaning (M16), model catalog sizes.
+- [ ] Acceptance: docs-only change; `npm run check` must stay green.
+
+### 8.6 Post-launch roadmap
+
+M17 (multi-model consensus) → M18 (performance telemetry) → M19 (settings
+search & shortcuts), exactly as scoped above. M17 first: it improves detection
+quality with zero new permissions. None blocks launch.
+
+### 8.5 Per-platform acceptance-criteria matrix *(the GA gate)*
+
+Legend: **GA** = must pass before launch; **B** = best-effort, ship with a
+documented caveat (Known-Limitations, L5). Every GA cell needs (1) a unit test
+in the repo AND (2) a live-verification entry in
+`docs/PLATFORM_VERIFICATION.md` (L1) on Chrome and Firefox.
+
+#### Flow 1 — Reading & analysing comments
+
+| Criterion | YouTube | Instagram | Facebook | TikTok |
+| --- | --- | --- | --- | --- |
+| Comments extracted via primary selectors (text, author, stable id) | GA | GA | GA | GA |
+| Secondary selectors still extract when primary drifts (`selectorStrategy`) | GA | GA | GA | GA |
+| Unmatched DOM returns `[]` without throwing; drift logged (`console.warn`) | GA | GA | GA | GA |
+| MutationObserver picks up infinite-scroll / thread-expansion additions, deduped by id | GA | GA | GA | GA |
+| Reply threads carry `parentId`/`parentText`/`depth` and merge conservatively | GA | GA | GA | B |
+| Offscreen-model analysis renders in modal; model-down → heuristic fallback + sidepanel badge | GA | GA | GA | GA |
+| Rainbow button a11y: role, aria-label, keyboard, modal `Escape`/focus-restore | GA | GA | GA | GA |
+| Calibration: dismissing a false positive raises that class threshold (resettable) | GA | GA | GA | GA |
+
+#### Flow 2 — Reporting comments
+
+| Criterion | YouTube | Instagram | Facebook | TikTok |
+| --- | --- | --- | --- | --- |
+| Modal "Report on \<Platform\>" opens the correct per-platform URL in a new tab (`noopener`) | GA | GA | GA | GA |
+| Evidence snippet copied to clipboard before navigation (L2) | GA | GA | GA | GA |
+| Button label derives from `comment.platform` (i18n'd, `en` fallback) | GA | GA | GA | GA |
+| Sidepanel card Report action uses the same `buildReportUrl` mapping | GA | GA | GA | GA |
+| Report works after the comment element is removed from the DOM (URL from persisted platform) | GA | GA | GA | GA |
+
+*Documented platform limitation (ship as B with caveat): no stable public
+comment-level report deep-link exists on any platform; all four target official
+report/help entry points. Revisit if a platform ships one.*
+
+#### Flow 3 — Reviewing own comment draft (pre-post)
+
+| Criterion | YouTube | Instagram | Facebook | TikTok |
+| --- | --- | --- | --- | --- |
+| Composer matched by adapter `commentTextareaSelector` (textarea OR contenteditable) | GA | GA | GA | GA |
+| Review button rendered once per composer; SPA re-render yields a fresh button, never duplicates | GA | GA | GA | GA |
+| Draft text read correctly (`value` vs `textContent`) and analysed through the scheduler | GA | GA | GA | GA |
+| Empty draft → i18n "nothing to review" note, no inference call (L3) | GA | GA | GA | GA |
+| Flagged draft shows warning state in the modal before posting (L3) | GA | GA | GA | GA |
+| Composer discovery survives SPA navigation via adapter observation (L3) | GA | GA | B | B |
+
+#### Cross-platform (both browsers)
+
+| Criterion | Chrome | Firefox |
+| --- | --- | --- |
+| `npm run check` green (typecheck + tests + build) | GA | GA |
+| `npm run package:firefox` produces a correct transformed manifest | — | GA |
+| Offscreen document created on install; messages relayed with `relayed` dedup | GA | GA (background-scripts path) |
+| Optional host permissions requested per platform via welcome-flow toggles | GA | GA |
+| No network beyond Hugging Face model fetch; no `chrome.storage.sync` for flags/telemetry (architecture guard tests) | GA | GA |
+
+> Every criterion maps to an existing or explicitly new test suite (adapter
+> suites, `reportHelper.test.ts`, `draftReview.test.ts`, `injectedA11y.test.ts`,
+> `Sidepanel.test.tsx`, `releaseVersion.test.ts`, architecture guards). Per §7,
+> state the criterion → test mapping in the push description for each
+> L-milestone.
+
