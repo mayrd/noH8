@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useSettingsStore } from './settingsStore';
 import { useModelStore } from './modelStore';
 import { requestModelCommand } from '../offscreen/client';
+import { findModelDescriptor } from '../offscreen/modelCatalog';
 import { markOnboarded } from './onboarding';
 import { t } from '../shared/i18n';
 import type { Platform } from './types';
@@ -31,12 +32,18 @@ export interface WelcomeProps {
 }
 
 export const Welcome: React.FC<WelcomeProps> = ({ onFinish }) => {
-  const { enabledPlatforms, setEnabledPlatform } = useSettingsStore();
-  const { selectedModelId, downloadedModels, modelStatus } = useModelStore();
+  const { enabledPlatforms, setEnabledPlatform, reviewOwnCommentDrafts, setReviewOwnCommentDrafts } =
+    useSettingsStore();
+  const { selectedModelId, downloadedModels, modelStatus, downloadProgress } = useModelStore();
   const [downloadRequested, setDownloadRequested] = useState(false);
+
+  const selectedModelName = findModelDescriptor(selectedModelId)?.name ?? selectedModelId;
 
   const modelReady =
     downloadedModels.includes(selectedModelId) || modelStatus[selectedModelId] === 'ready';
+  const modelDownloading = modelStatus[selectedModelId] === 'downloading';
+  const modelErrored = modelStatus[selectedModelId] === 'error';
+  const progressPercent = Math.max(0, Math.min(100, downloadProgress[selectedModelId] ?? 0));
 
   const handleToggle = (platform: Platform): void => {
     setEnabledPlatform(platform, !enabledPlatforms[platform]);
@@ -44,7 +51,14 @@ export const Welcome: React.FC<WelcomeProps> = ({ onFinish }) => {
 
   const handleDownload = async (): Promise<void> => {
     setDownloadRequested(true);
-    await requestModelCommand('download', selectedModelId);
+    try {
+      await requestModelCommand('download', selectedModelId);
+    } catch {
+      // The offscreen pipeline records the `error` status in the model store,
+      // which re-enables the button below via the `modelErrored` branch.
+    } finally {
+      setDownloadRequested(false);
+    }
   };
 
   const complete = async (): Promise<void> => {
@@ -105,18 +119,78 @@ export const Welcome: React.FC<WelcomeProps> = ({ onFinish }) => {
           <p className="text-xs text-slate-400">
             {t('welcome.model.desc')}
           </p>
+          <p className="text-xs font-medium text-slate-200" data-testid="welcome-model-name">
+            {t('welcome.model.selected', { name: selectedModelName })}
+          </p>
           {modelReady ? (
             <p className="text-xs font-medium text-emerald-400">{t('welcome.model.ready')}</p>
+          ) : modelDownloading ? (
+            <div className="space-y-2" data-testid="welcome-model-progress">
+              <div className="flex justify-between text-xs text-slate-400">
+                <span>{t('welcome.model.downloading')}</span>
+                <span>{progressPercent}%</span>
+              </div>
+              <div
+                className="h-2 w-full rounded-full bg-slate-700 overflow-hidden"
+                role="progressbar"
+                aria-valuenow={progressPercent}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <div
+                  className="h-full rounded-full bg-indigo-500 transition-all duration-200"
+                  style={{ width: `${progressPercent}%` }}
+                  data-testid="welcome-model-progress-bar"
+                />
+              </div>
+              <p className="text-xs text-slate-400" data-testid="welcome-model-safe">
+                {t('welcome.model.safeToLeave')}
+              </p>
+            </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => void handleDownload()}
-              disabled={downloadRequested}
-              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-500 disabled:opacity-60 transition"
-            >
-              {downloadRequested ? t('welcome.model.downloading') : t('welcome.model.download')}
-            </button>
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={() => void handleDownload()}
+                disabled={downloadRequested}
+                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-500 disabled:opacity-60 transition"
+              >
+                {downloadRequested ? t('welcome.model.downloading') : t('welcome.model.download')}
+              </button>
+              {modelErrored && (
+                <p
+                  className="text-xs text-rose-400"
+                  data-testid="welcome-model-failed"
+                  role="alert"
+                >
+                  {t('welcome.model.failed')}
+                </p>
+              )}
+            </div>
           )}
+        </section>
+
+        {/* Step 3 — optional own-draft review toggle */}
+        <section aria-labelledby="welcome-drafts" className="space-y-2">
+          <h2 id="welcome-drafts" className="text-sm font-semibold text-slate-200">
+            {t('welcome.step3')}
+          </h2>
+          <div className="flex items-center justify-between bg-slate-900/60 border border-slate-700/70 rounded-lg px-4 py-2.5">
+            <label
+              htmlFor="welcome-review-drafts"
+              className="text-sm text-slate-200"
+            >
+              {t('settings.reviewDrafts')}
+              <span className="block text-xs text-slate-400">{t('welcome.drafts.desc')}</span>
+            </label>
+            <input
+              id="welcome-review-drafts"
+              type="checkbox"
+              checked={reviewOwnCommentDrafts}
+              onChange={(e) => setReviewOwnCommentDrafts(e.target.checked)}
+              className="h-4 w-4 accent-rose-500"
+            />
+          </div>
         </section>
 
         <footer className="flex items-center justify-between pt-2">

@@ -108,9 +108,17 @@ export const en = {
   'welcome.step2': '2. Get the detection model',
   'welcome.model.desc':
     'Downloads once from the Hugging Face Hub, then runs offline on-device. Until it is ready a built-in keyword heuristic keeps analysis working.',
+  'welcome.model.selected': 'Model to download: {name}',
+  'welcome.step3': '3. Review your own drafts (optional)',
+  'welcome.drafts.desc':
+    'Also analyse your own comment drafts for sentiment and harmful language before you post them.',
   'welcome.model.ready': '✓ Model is ready',
   'welcome.model.download': 'Download model',
   'welcome.model.downloading': 'Downloading…',
+  'welcome.model.progress': 'Downloading from Hugging Face… {percent}%',
+  'welcome.model.safeToLeave':
+    'You can safely click "Get started" or close this page — the download continues in the background.',
+  'welcome.model.failed': 'Download failed. Check your connection and try again.',
   'welcome.skip': 'Skip',
   'welcome.getStarted': 'Get started',
 
