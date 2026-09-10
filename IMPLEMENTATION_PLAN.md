@@ -21,7 +21,7 @@ All inference runs **100% locally on the client** via WebAssembly/WebGPU using
 * **State:** Zustand (`settingsStore`, `modelStore`)
 * **ML / On-Device NLP:** `@xenova/transformers` running in an **offscreen document** (ONNX wasm/WebGPU), plus a deterministic heuristic fallback
 * **DOM Observation:** `MutationObserver` + per-platform selector adapters
-* **Tests:** Vitest (47 files / 376 tests currently passing)
+* **Tests:** Vitest (48 files / 410 tests currently passing)
 
 ---
 
@@ -534,7 +534,7 @@ M10 made scanning fast but invisible; users can't see what a scan costs.
 > (Chrome Web Store + Firefox AMO), and (c) user-facing docs/policy. All
 > launch-blocking work lives here; M17–M19 are deferred to §8.6.
 
-### L1 — Live-platform verification harness *(launch blocker)* ⬜ TODO
+### L1 — Live-platform verification harness *(launch blocker)* 🟨 IN PROGRESS
 
 All adapter/modal/draft tests run against fake DOMs, so live selector drift is
 only caught manually. Every platform×flow cell in the matrix (§8.5) must be
@@ -542,36 +542,60 @@ verified against the **live site** on Chrome and Firefox and recorded in
 `docs/PLATFORM_VERIFICATION.md` (new file: date, browser, version, platform,
 flow, pass/fail, selector-drift notes).
 
-- [ ] Add a `verify` script that prints the §8.5 matrix as a checklist (no
-      network beyond the visited page itself).
+- [x] Add a `verify` script that prints the §8.5 matrix as a checklist (no
+      network beyond the visited page itself). **Done:** machine-readable
+      matrix lives in `scripts/platformVerification.mjs` (single source),
+      `scripts/verify-platforms.mjs` prints it via `npm run verify`, and
+      `docs/PLATFORM_VERIFICATION.md` is generated from the same matrix with
+      one pending row per cell (85 cells: 82 GA + 3 documented B).
+- [x] Coverage guard: `tests/unit/platformVerification.test.ts` audits the
+      matrix against the §8.5 shape (flow/criterion counts, GA/B grades, row
+      id uniqueness), the checklist renderer output, doc coverage of every
+      row, and the `verify` npm-script registration (7 tests).
 - [ ] For each failing cell, file a selector-drift fix through
       `selectorStrategy.ts` secondary selectors — never weaken existing
       adapter assertions; add fixtures mirroring the new live DOM.
-- [ ] Acceptance: `docs/PLATFORM_VERIFICATION.md` complete for all GA cells;
-      any selector change ships with a new fixture test in that platform's
-      adapter suite (RED→GREEN).
+      *(Blocked on manual live runs — see the pending cells in
+      `docs/PLATFORM_VERIFICATION.md`.)*
+- [ ] Acceptance (remaining): `docs/PLATFORM_VERIFICATION.md` complete for all
+      GA cells (0/85 recorded so far); any selector change ships with a new
+      fixture test in that platform's adapter suite (RED→GREEN).
 
-### L2 — Reporting flow hardening *(launch blocker)* ⬜ TODO
+### L2 — Reporting flow hardening *(launch blocker)* ✅ DONE
 
 `reportHelper.ts` currently deep-links only to generic help/policy pages (no
 platform offers a stable comment-level report URL — documented limitation).
 Make the flow complete and testable per platform.
 
-- [ ] Evidence-snippet copy: "Report" in the analysis modal first copies a
+- [x] Evidence-snippet copy: "Report" in the analysis modal first copies a
       structured snippet (comment text, author, platform, NoH8 score) to the
       clipboard via a thin injectable `navigator.clipboard` seam (no new
       permissions), then opens the platform report URL in a new tab with
-      `target="_blank" rel="noopener noreferrer"`.
-- [ ] Sidepanel parity: the dashboard card's Report action must import
-      `buildReportUrl` from `content/ui/reportHelper.ts` (single source —
-      delete any duplicate mapping).
-- [ ] Removed-comment handling: reporting a comment whose element left the DOM
-      still resolves the URL from the persisted `platform` field.
-- [ ] Acceptance: extend `reportHelper.test.ts` (snippet format, clipboard seam
-      invoked, `rel="noopener"` attribute, per-platform URL matrix unchanged);
-      new `Sidepanel.test.tsx` block asserting the dashboard Report button uses
-      `buildReportUrl` for all four platforms; new i18n keys with
-      catalog-completeness tests.
+      `target="_blank" rel="noopener noreferrer"`. **Done:** `reportHelper.ts`
+      gained `buildReportSnippet` (pure, i18n-driven), `copyReportSnippet`,
+      `openReportAnchor`, and the `reportComment` orchestrator; the modal
+      routes its Report button through it with a copy-status feedback line.
+- [x] Sidepanel parity: the dashboard card's Report action routes through the
+      same `reportComment` flow (single source — the duplicated
+      `buildReportUrl` + open logic in `Sidepanel.tsx` was deleted in favor of
+      the shared helper, opened via `chrome.tabs.create`) and shows a
+      transient "Evidence copied" status per card.
+- [x] Removed-comment handling: reporting a comment whose element left the DOM
+      still resolves the URL from the persisted `platform` field —
+      `buildReportUrl` is a pure function of `platform` (guarded by test).
+- [x] Acceptance: `reportHelper.test.ts` extended (snippet format, clipboard
+      seam invoked / unavailable / rejected, `rel="noopener noreferrer"`
+      anchor attribute, URL matrix unchanged, platform-only URL derivation);
+      `analysisModal.test.ts` updated (evidence copied before navigation,
+      popup-safe anchor, copy-status line, failure note); new
+      `Sidepanel.test.tsx` "report flow (L2)" block asserting the dashboard
+      Report button opens the `buildReportUrl` destination for all four
+      platforms, copies the snippet, shows the copy status, and works with no
+      DOM reference; new i18n keys (`report.snippet.*`, `modal.report.*`,
+      `sidepanel.reportCopied`/`reportCopyFailed`) covered by the existing
+      catalog-completeness suite plus explicit interpolation tests.
+      No new permissions, no network. `npm run check` green
+      (48 files / 410 tests + typecheck + build).
 
 ### L3 — Draft-review composer coverage *(launch blocker)* ⬜ TODO
 

@@ -35,6 +35,11 @@ export interface ModalOptions {
    * keyboard focus is returned to it (M15 accessibility).
    */
   trigger?: UiElement;
+  /**
+   * (L2) Injectable clipboard seam used to copy the report evidence snippet
+   * before navigation. Defaults to the runtime `navigator.clipboard`.
+   */
+  clipboard?: import('./reportHelper').ClipboardSeam;
 }
 
 export interface DraftReviewOptions {

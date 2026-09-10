@@ -156,6 +156,17 @@ export const en = {
 
   // M16 — sidepanel heuristic-fallback badge
   'sidepanel.fallbackBadge': 'Heuristic fallback — model unavailable',
+
+  // L2 — reporting flow hardening (evidence snippet + copy status)
+  'report.snippet.header': 'NoH8 evidence — report on {platform}',
+  'report.snippet.author': 'Author: {author}',
+  'report.snippet.score': 'NoH8 score: {percent}% — flagged as possible hate speech',
+  'report.snippet.scoreClean': 'NoH8 score: {percent}% — not flagged',
+  'report.snippet.comment': 'Comment: "{text}"',
+  'modal.report.copied': 'Evidence copied to clipboard.',
+  'modal.report.copyFailed': 'Could not copy evidence.',
+  'sidepanel.reportCopied': 'Evidence copied',
+  'sidepanel.reportCopyFailed': 'Copy failed',
 } as const;
 
 /** All available locale catalogs. `en` is the source of truth. */

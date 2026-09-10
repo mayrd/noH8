@@ -7,7 +7,7 @@ import {
 } from './flagStore';
 import type { IssueId } from '../shared/types';
 import { MSG } from '../shared/messages';
-import { buildReportUrl, PLATFORM_LABELS, type ReportPlatform } from '../content/ui/reportHelper';
+import { PLATFORM_LABELS, reportComment, type ClipboardSeam } from '../content/ui/reportHelper';
 import { dismissFlaggedComment } from './flagStore';
 import { exportFlagsToJson, flagsExportFileName } from './flagExport';
 import { t } from '../shared/i18n';
@@ -49,6 +49,8 @@ export const Sidepanel: React.FC = () => {
 
   const [scope, setScope] = useState<'page' | 'all'>('page');
   const [jumpStatus, setJumpStatus] = useState<Record<string, string>>({});
+  // (L2) Per-comment report copy status, transient like `jumpStatus`.
+  const [reportStatus, setReportStatus] = useState<Record<string, string>>({});
   // (M16) Whether the last offscreen inference fell back to the heuristic —
   // surfaced as a badge so the accuracy drop is visible instead of silent.
   const [fallbackActive, setFallbackActive] = useState<boolean>(false);
@@ -113,15 +115,43 @@ export const Sidepanel: React.FC = () => {
   };
 
   const handleReport = (comment: FlaggedComment): void => {
-    const url = buildReportUrl(comment.platform as ReportPlatform, {
-      id: comment.commentId,
-      platform: comment.platform,
+    // (L2) Single-source report flow: evidence snippet to the clipboard, then
+    // the platform report URL (built by the shared `buildReportUrl` inside
+    // `reportComment`). Works with no DOM reference — the URL derives from the
+    // persisted `platform` field.
+    const clipboard =
+      typeof navigator !== 'undefined' ? (navigator.clipboard as ClipboardSeam | undefined) : undefined;
+    void reportComment(
+      {
+        id: comment.commentId,
+        platform: comment.platform as 'youtube' | 'instagram' | 'facebook' | 'tiktok',
+        author: comment.author,
+        text: comment.text,
+      },
+      { isHateSpeech: comment.isHateSpeech, hateSpeechScore: comment.hateSpeechScore },
+      {
+        clipboard,
+        openTab: (url) => {
+          if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
+            chrome.tabs.create({ url });
+          } else if (typeof window !== 'undefined') {
+            window.open(url, '_blank', 'noopener,noreferrer');
+          }
+        },
+      }
+    ).then((outcome) => {
+      setReportStatus((prev) => ({
+        ...prev,
+        [comment.id]: t(outcome.copied ? 'sidepanel.reportCopied' : 'sidepanel.reportCopyFailed'),
+      }));
+      setTimeout(() => {
+        setReportStatus((prev) => {
+          const next = { ...prev };
+          delete next[comment.id];
+          return next;
+        });
+      }, 3000);
     });
-    if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
-      chrome.tabs.create({ url });
-    } else if (typeof window !== 'undefined') {
-      window.open(url, '_blank', 'noopener,noreferrer');
-    }
   };
 
   const handleDismiss = async (comment: FlaggedComment): Promise<void> => {
@@ -252,7 +282,7 @@ export const Sidepanel: React.FC = () => {
                     {comment.author || t('sidepanel.anonymous')}
                   </span>
                   <span className="text-[10px] text-slate-500 uppercase tracking-wider">
-                    {PLATFORM_LABELS[comment.platform as ReportPlatform] || comment.platform}
+                    {PLATFORM_LABELS[comment.platform as 'youtube' | 'instagram' | 'facebook' | 'tiktok'] || comment.platform}
                   </span>
                 </div>
                 <span className="text-xs font-bold text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">
@@ -281,6 +311,9 @@ export const Sidepanel: React.FC = () => {
                 <div className="text-[11px] text-slate-500">
                   {jumpStatus[comment.id] && (
                     <span className="text-amber-400">{jumpStatus[comment.id]}</span>
+                  )}
+                  {reportStatus[comment.id] && (
+                    <span className="text-emerald-400">{reportStatus[comment.id]}</span>
                   )}
                 </div>
                 <div className="flex items-center gap-2">

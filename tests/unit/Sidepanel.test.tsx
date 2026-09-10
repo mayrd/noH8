@@ -1,8 +1,9 @@
 import React from 'react';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, test, expect, vi, beforeEach } from 'vitest';
 import { useFlagStore, type FlaggedComment } from '../../src/sidepanel/flagStore';
+import { buildReportUrl } from '../../src/content/ui/reportHelper';
 import Sidepanel from '../../src/sidepanel/Sidepanel';
 
 const sampleComment: FlaggedComment = {
@@ -257,5 +258,82 @@ describe('Sidepanel fallback badge (M16)', () => {
 
     await screen.findByText(/no flagged comments/i);
     expect(screen.queryByTestId('fallback-badge')).not.toBeInTheDocument();
+  });
+});
+
+// --- L2: reporting flow hardening -------------------------------------------
+
+const PLATFORMS = ['youtube', 'instagram', 'facebook', 'tiktok'] as const;
+
+function commentFor(platform: (typeof PLATFORMS)[number]): FlaggedComment {
+  return { ...sampleComment, id: `1-${platform}`, commentId: `${platform}-1`, platform };
+}
+
+describe('Sidepanel report flow (L2)', () => {
+  test.each(PLATFORMS)(
+    'Report button opens the buildReportUrl destination for %s in a new tab',
+    async (platform) => {
+      const comment = commentFor(platform);
+      const { tabsCreate } = setupMockChrome(undefined, [comment]);
+      useFlagStore.setState({ comments: [comment] });
+      const user = userEvent.setup();
+
+      render(<Sidepanel />);
+
+      const reportButton = screen.getByRole('button', { name: /report/i });
+      await user.click(reportButton);
+
+      expect(tabsCreate).toHaveBeenCalledWith({ url: buildReportUrl(platform, comment) });
+    }
+  );
+
+  test('copies the evidence snippet to the clipboard before opening the tab', async () => {
+    const comment = commentFor('youtube');
+    setupMockChrome(undefined, [comment]);
+    useFlagStore.setState({ comments: [comment] });
+    // jsdom ships a native `navigator.clipboard`; patch its writeText.
+    const writeText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue(undefined);
+    (navigator.clipboard as unknown as { writeText: unknown }).writeText = writeText;
+    const user = userEvent.setup();
+
+    render(<Sidepanel />);
+    await user.click(screen.getByRole('button', { name: /report/i }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+
+    expect(writeText.mock.calls[0]![0]).toContain(comment.text);
+    expect(writeText.mock.calls[0]![0]).toContain(comment.author);
+    expect(writeText.mock.calls[0]![0]).toContain('YouTube');
+    expect(writeText.mock.calls[0]![0]).toContain('92%');
+  });
+
+  test('shows a transient "evidence copied" status after reporting', async () => {
+    const comment = commentFor('youtube');
+    setupMockChrome(undefined, [comment]);
+    useFlagStore.setState({ comments: [comment] });
+    (navigator.clipboard as unknown as { writeText: unknown }).writeText = vi
+      .fn<(text: string) => Promise<void>>()
+      .mockResolvedValue(undefined);
+    const user = userEvent.setup();
+
+    render(<Sidepanel />);
+    await user.click(screen.getByRole('button', { name: /report/i }));
+
+    expect(await screen.findByText(/evidence copied/i)).toBeInTheDocument();
+  });
+
+  test('report still opens for a comment whose element is gone (URL from persisted platform)', async () => {
+    // FlaggedComment carries no DOM reference at all — the URL must derive
+    // purely from the persisted `platform` field.
+    const comment: FlaggedComment = { ...commentFor('facebook'), commentId: 'gone-1' };
+    const { tabsCreate } = setupMockChrome(undefined, [comment]);
+    useFlagStore.setState({ comments: [comment] });
+    const user = userEvent.setup();
+
+    render(<Sidepanel />);
+    await user.click(screen.getByRole('button', { name: /report/i }));
+
+    expect(tabsCreate).toHaveBeenCalledWith({
+      url: 'https://www.facebook.com/help/contact/153231014864064',
+    });
   });
 });

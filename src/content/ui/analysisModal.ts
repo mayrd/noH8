@@ -3,10 +3,13 @@ import { t } from '../../shared/i18n';
 import {
   buildReportUrl,
   reportActionLabel,
+  reportComment,
+  type ClipboardSeam,
 } from './reportHelper';
 import {
   RAINBOW_GRADIENT,
   type ModalOptions,
+  type UiDocument,
   type UiElement,
 } from './uiTypes';
 
@@ -49,7 +52,7 @@ function styles(el: UiElement, values: Record<string, string>): void {
  * `trigger` on any close path.
  */
 export function openAnalysisModal(options: ModalOptions): UiElement {
-  const { doc, comment, analysis, windowRef, trigger } = options;
+  const { doc, comment, analysis, windowRef, trigger, clipboard } = options;
 
   const overlay = doc.createElement('div');
   overlay.setAttribute?.('data-noh8-modal-overlay', 'true');
@@ -223,9 +226,22 @@ export function openAnalysisModal(options: ModalOptions): UiElement {
     background: 'linear-gradient(90deg, #f4287d, #9b59b6)',
   });
   reportBtn.addEventListener?.('click', () => {
-    windowRef?.open(buildReportUrl(comment.platform, comment), '_blank');
+    // (L2) Copy the structured evidence snippet to the clipboard first, then
+    // open the platform report URL in a new tab via a popup-safe anchor.
+    void reportComment(comment, analysis, { doc, clipboard }).then(
+      (outcome) => {
+        status.textContent = t(
+          outcome.copied ? 'modal.report.copied' : 'modal.report.copyFailed'
+        );
+      }
+    );
   });
   append(card, reportBtn);
+
+  // (L2) Copy status feedback line, filled in asynchronously by the handler.
+  const status = doc.createElement('div');
+  styles(status, { color: '#1a7f37', fontSize: '12px', marginTop: '8px', minHeight: '14px' });
+  append(card, status);
 
   // Privacy note
   const note = doc.createElement('div');

@@ -33,6 +33,12 @@ export interface UiElement {
   querySelectorAll(selector: string): UiElement[] | NodeListOf<Element>;
   /** Smooth-scroll support used by the sidepanel "Jump to comment" flow. */
   scrollIntoView?(arg?: { behavior?: string; block?: string }): void;
+  /**
+   * Programmatic click, used by the report flow to activate a temporary
+   * `target="_blank" rel="noopener noreferrer"` anchor (L2). Real DOM
+   * elements expose it; fakes may fire recorded handlers.
+   */
+  click?(): void;
 }
 
 export interface UiDocument {

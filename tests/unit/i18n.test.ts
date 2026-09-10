@@ -65,3 +65,22 @@ describe('i18n catalog (M15)', () => {
     expect(resolveLocale()).toBe('en');
   });
 });
+
+// --- L2: reporting-flow keys ------------------------------------------------
+
+describe('reporting-flow catalog keys (L2)', () => {
+  test('evidence snippet keys interpolate their params', () => {
+    expect(t('report.snippet.header', { platform: 'YouTube' })).toContain('YouTube');
+    expect(t('report.snippet.author', { author: 'tester_user' })).toContain('tester_user');
+    expect(t('report.snippet.score', { percent: 92 })).toContain('92%');
+    expect(t('report.snippet.scoreClean', { percent: 10 })).toContain('not flagged');
+    expect(t('report.snippet.comment', { text: 'some comment' })).toContain('some comment');
+  });
+
+  test('copy status keys are non-empty', () => {
+    expect(t('modal.report.copied').length).toBeGreaterThan(0);
+    expect(t('modal.report.copyFailed').length).toBeGreaterThan(0);
+    expect(t('sidepanel.reportCopied').length).toBeGreaterThan(0);
+    expect(t('sidepanel.reportCopyFailed').length).toBeGreaterThan(0);
+  });
+});

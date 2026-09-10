@@ -10,7 +10,8 @@
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "check": "npm run typecheck && npm run test && npm run build",
-    "package:firefox": "node scripts/package-firefox.mjs"
+    "package:firefox": "node scripts/package-firefox.mjs",
+    "verify": "node scripts/verify-platforms.mjs"
   },
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.7.1",
