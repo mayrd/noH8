@@ -175,6 +175,100 @@ describe('YouTubeAdapter', () => {
     expect(adapter.extractComments()).toHaveLength(2);
   });
 });
+
+// --- L3: composer observation (draft-review coverage) ---
+
+describe('YouTubeAdapter composer observation (L3)', () => {
+  function makeComposerRoot(composers: unknown[]): { querySelectorAll: ReturnType<typeof vi.fn> } {
+    // Route comment selectors to [] and the composer selector to the fake set.
+    return {
+      querySelectorAll: vi.fn((sel: string) =>
+        sel === YouTubeAdapter.commentTextareaSelector ? (composers as never[]) : []
+      ),
+    };
+  }
+
+  function makeCapturer(): {
+    Ctor: new (cb: () => void) => { observe(r: unknown, c: unknown): void; disconnect(): void };
+    getCallback: () => (() => void) | null;
+  } {
+    let captured: (() => void) | null = null;
+    const Ctor = class {
+      constructor(cb: () => void) {
+        captured = cb;
+      }
+      observe(_root: unknown, _config: unknown): void {}
+      disconnect(): void {}
+    };
+    return { Ctor, getCallback: () => captured };
+  }
+
+  test('observe reports composers on the initial scan', () => {
+    const { Ctor } = makeCapturer();
+    const composer = { tagName: 'TEXTAREA' };
+    const adapter = new YouTubeAdapter({
+      root: makeComposerRoot([composer]) as never,
+      MutationObserver: Ctor as never,
+    });
+
+    const seen: unknown[][] = [];
+    adapter.observe(() => {}, (composers) => seen.push(composers));
+
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toEqual([composer]);
+  });
+
+  test('observe reports only new composers on later scans (SPA re-render dedup)', () => {
+    const { Ctor, getCallback } = makeCapturer();
+    const composers: unknown[] = [{ tagName: 'TEXTAREA' }];
+    const adapter = new YouTubeAdapter({
+      root: makeComposerRoot(composers) as never,
+      MutationObserver: Ctor as never,
+    });
+
+    const seen: unknown[][] = [];
+    adapter.observe(() => {}, (composersFound) => seen.push(composersFound));
+    expect(seen).toHaveLength(1);
+
+    // Same set on rescan → no duplicate report.
+    getCallback()!();
+    expect(seen).toHaveLength(1);
+
+    // A fresh composer appears (SPA re-render) → reported exactly once.
+    const fresh = { tagName: 'TEXTAREA' };
+    composers.push(fresh);
+    getCallback()!();
+    expect(seen).toHaveLength(2);
+    expect(seen[1]).toEqual([fresh]);
+  });
+
+  test('composer callback is optional (backwards compatible)', () => {
+    const { Ctor, getCallback } = makeCapturer();
+    const composer = { tagName: 'TEXTAREA' };
+    const adapter = new YouTubeAdapter({
+      root: makeComposerRoot([composer]) as never,
+      MutationObserver: Ctor as never,
+    });
+
+    // No composer callback — must not throw on initial scan or rescan.
+    expect(() => adapter.observe(() => {})).not.toThrow();
+    expect(() => getCallback()!()).not.toThrow();
+  });
+
+  test('adapters without a composer selector never fire the composer callback', () => {
+    const { Ctor, getCallback } = makeCapturer();
+    const adapter = new YouTubeAdapter({
+      root: { querySelectorAll: vi.fn(() => []) } as never,
+      MutationObserver: Ctor as never,
+    });
+    adapter.commentTextareaSelector = undefined;
+
+    const seen: unknown[][] = [];
+    adapter.observe(() => {}, (composers) => seen.push(composers));
+    getCallback()!();
+    expect(seen).toHaveLength(0);
+  });
+});
 // --- M14: reply-thread context extraction ---
 
 interface TaggedFake {

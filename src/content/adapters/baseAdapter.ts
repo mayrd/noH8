@@ -1,4 +1,5 @@
 import type { CommentData, AnalysisResult } from '../../shared/types';
+import type { UiElement } from '../../shared/uiTypes';
 
 export abstract class BaseAdapter {
   abstract platformName: string;
@@ -12,7 +13,29 @@ export abstract class BaseAdapter {
 
   abstract extractComments(): CommentData[];
   abstract injectWarning(commentId: string, result: AnalysisResult): void;
-  abstract observe(onNewCommentsFound: (comments: CommentData[]) => void): void;
+
+  /**
+   * Observe the page for newly added comments (infinite scroll, thread
+   * expansion, SPA navigation).
+   *
+   * L3: also watches for comment composers matching
+   * `commentTextareaSelector`. The optional `onComposersFound` callback fires
+   * with exactly the composers that appeared since the previous scan
+   * (deduped, so SPA re-renders yield a fresh button per composer but never
+   * duplicates). Adapters without a composer selector never fire it.
+   */
+  abstract observe(
+    onNewCommentsFound: (comments: CommentData[]) => void,
+    onComposersFound?: (composers: UiElement[]) => void
+  ): void;
+
+  /**
+   * List the currently rendered comment-composer elements (textareas /
+   * contenteditables matching `commentTextareaSelector`). Empty when the
+   * adapter has no composer selector or no root. Used by `observe()` and by
+   * the content-script boot scan.
+   */
+  abstract extractComposers(): UiElement[];
 
   /**
    * Optional CSS selector for a platform-specific anchor element inside the

@@ -17,6 +17,10 @@ export const en = {
   // Injected rainbow buttons (content/ui)
   'rainbowButton.label': 'View NoH8 analysis for comment by {author}',
   'draftReview.label': 'Review this comment draft with NoH8 ({author})',
+  // L3 — draft-review composer coverage: pre-post check of the user's own draft.
+  'draftReview.empty': 'Nothing to review yet — write your comment first.',
+  'draftReview.flaggedTitle': '⚠ Your draft may read as hateful — review before posting.',
+  'draftReview.flaggedButton': 'Your draft was flagged — review before posting ({author})',
   'report.action': 'Report on {platform}',
 
   // Analysis modal (content/ui/analysisModal.ts)

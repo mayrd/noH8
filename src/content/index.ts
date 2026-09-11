@@ -92,7 +92,33 @@ function start(): void {
       );
 
       for (const adapter of adapters) {
-        adapter.observe((comments) => {
+        /**
+         * L3: decorate one composer element. Idempotent — already-decorated
+         * composers (dataset flag) and elements detached from the DOM are
+         * skipped, so SPA re-renders yield a fresh button per composer but
+         * never duplicates.
+         */
+        const decorateComposer = (el: unknown): void => {
+          const uiEl = asUiElement(el as Element);
+          if (uiEl.dataset?.['noh8DraftButton'] === 'true') return;
+          renderDraftReviewButton({
+            textarea: uiEl,
+            platform: adapter.platformName,
+            doc: asUiDocument(document),
+            windowRef: asUiWindow(window),
+            analyze: (draft) =>
+              scheduler.schedule({
+                commentId: draft.id,
+                text: draft.text,
+                // (M17) Draft reviews share the model-scoped cache.
+                modelId: currentModelKey(),
+              }),
+            author: 'You',
+          });
+        };
+
+        adapter.observe(
+          (comments) => {
           for (const comment of comments) {
             console.info(
               `[NoH8][${adapter.platformName}] comment by ${comment.author}: ${comment.text}`
@@ -153,34 +179,21 @@ function start(): void {
               });
             });
           }
-        });
-      }
+        },
+          // L3: composer discovery survives SPA navigation via the adapter
+          // observation — fresh composers yield a fresh button, never
+          // duplicates. Gated on the review-drafts setting.
+          (composers) => {
+            if (!settingsStore.getState().reviewOwnCommentDrafts) return;
+            for (const composer of composers) decorateComposer(composer);
+          }
+        );
 
-      // Setup rainbow button for comment draft textareas
-      const enabledSetting = settingsStore.getState().reviewOwnCommentDrafts;
-      if (enabledSetting) {
-        adapters.forEach((adapter) => {
-          const selector = adapter.commentTextareaSelector;
-          if (!selector) return;
-          const matches = Array.from(document.querySelectorAll<HTMLElement>(selector));
-          matches.forEach((el) => {
-            if (el.dataset?.['noh8DraftButton'] === 'true') return;
-            renderDraftReviewButton({
-              textarea: asUiElement(el),
-              platform: adapter.platformName,
-              doc: asUiDocument(document),
-              windowRef: asUiWindow(window),
-              analyze: (draft) =>
-                scheduler.schedule({
-                  commentId: draft.id,
-                  text: draft.text,
-                  // (M17) Draft reviews share the model-scoped cache.
-                  modelId: currentModelKey(),
-                }),
-              author: 'You',
-            });
-          });
-        });
+        // L3: decorate composers already rendered at boot (adapter-scoped
+        // discovery — no global querySelector, no hard-coded selectors).
+        if (settingsStore.getState().reviewOwnCommentDrafts) {
+          for (const composer of adapter.extractComposers()) decorateComposer(composer);
+        }
       }
     })
     .catch((error) => {

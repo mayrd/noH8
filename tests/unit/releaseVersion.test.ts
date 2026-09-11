@@ -16,7 +16,7 @@ import { buildFirefoxManifest } from '../../scripts/package-firefox.mjs';
  * files carry the release version, which prevents shipping stale versions
  * (Chrome treats a same-version upload as an update rejection).
  */
-const EXPECTED_VERSION = '0.2.0';
+const EXPECTED_VERSION = '0.3.0';
 
 const SEMVER_RE = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
 

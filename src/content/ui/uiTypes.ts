@@ -40,6 +40,13 @@ export interface ModalOptions {
    * before navigation. Defaults to the runtime `navigator.clipboard`.
    */
   clipboard?: import('./reportHelper').ClipboardSeam;
+  /**
+   * (L3) Pre-post warning shown at the top of the modal when the user reviews
+   * their *own* draft and the analysis flags it. Renders an i18n banner
+   * (`data-noh8-draft-warning`) above the sentiment section; unset for
+   * regular comment analyses.
+   */
+  draftWarning?: string;
 }
 
 export interface DraftReviewOptions {

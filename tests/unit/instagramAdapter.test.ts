@@ -177,6 +177,46 @@ test('extractComments parses comment text, author and element refs from the DOM'
     expect(adapter.extractComments()).toHaveLength(2);
   });
 
+  test('observe reports fresh composers via the adapter composer selector (L3)', () => {
+    let captured: (() => void) | null = null;
+    const Ctor = class {
+      constructor(cb: () => void) {
+        captured = cb;
+      }
+      observe(_root: unknown, _config: unknown): void {}
+      disconnect(): void {}
+    };
+    const composers: unknown[] = [{ tagName: 'TEXTAREA' }];
+    const root = {
+      querySelectorAll: vi.fn((sel: string) =>
+        sel === InstagramAdapter.commentTextareaSelector ? (composers as never[]) : []
+      ),
+    };
+    const adapter = new InstagramAdapter({ root: root as any, MutationObserver: Ctor as any });
+
+    const seen: unknown[][] = [];
+    adapter.observe(() => {}, (found) => seen.push(found));
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toHaveLength(1);
+
+    // Rescan with the same composer → no duplicate report.
+    captured!();
+    expect(seen).toHaveLength(1);
+
+    // Fresh composer after an SPA re-render → reported exactly once.
+    const fresh = { tagName: 'TEXTAREA' };
+    composers.push(fresh);
+    captured!();
+    expect(seen).toHaveLength(2);
+    expect(seen[1]).toEqual([fresh]);
+  });
+
+  test('extractComposers returns [] when the adapter has no composer selector (L3)', () => {
+    const adapter = new InstagramAdapter({ root: { querySelectorAll: vi.fn(() => []) } as any });
+    adapter.commentTextareaSelector = undefined;
+    expect(adapter.extractComposers()).toEqual([]);
+  });
+
   test('declares an Instagram heart/like button selector used to anchor the rainbow button', () => {
     expect(InstagramAdapter.heartButtonSelector).toBeTruthy();
     expect(typeof InstagramAdapter.heartButtonSelector).toBe('string');

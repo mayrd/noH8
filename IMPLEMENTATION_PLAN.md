@@ -628,7 +628,7 @@ Make the flow complete and testable per platform.
       No new permissions, no network. `npm run check` green
       (48 files / 410 tests + typecheck + build).
 
-### L3 — Draft-review composer coverage *(launch blocker)* ⬜ TODO
+### L3 — Draft-review composer coverage *(launch blocker)* ✅ DONE
 
 Draft review works generically (`draftReview.ts`), but composer discovery and
 lifecycle are per-platform and under-tested.
@@ -646,7 +646,7 @@ lifecycle are per-platform and under-tested.
       `draftReview.test.ts` blocks for empty-draft + flagged-state styling;
       a11y block in `injectedA11y.test.ts` for the warning state.
 
-### L4 — Store submission & release hygiene *(launch blocker)* ⬜ TODO
+### L4 — Store submission & release hygiene *(launch blocker)* ✅ DONE
 
 - [ ] Chrome Web Store: zip `dist/`; verify `public/manifest.json` matches
       `vite.config.ts` `defineManifest()`; single-purpose description; scoped

@@ -171,4 +171,35 @@ describe('TikTokAdapter', () => {
     expect(calls[0][0]).not.toBe(calls[1][0]);
     expect(adapter.extractComments()).toHaveLength(2);
   });
+
+  test('observe reports fresh composers via the adapter composer selector (L3)', () => {
+    let captured: (() => void) | null = null;
+    const Ctor = class {
+      constructor(cb: () => void) {
+        captured = cb;
+      }
+      observe(_root: unknown): void {}
+      disconnect(): void {}
+    };
+    const composers: unknown[] = [{ tagName: 'TEXTAREA' }];
+    const root = {
+      querySelectorAll: vi.fn((sel: string) =>
+        sel === TikTokAdapter.commentTextareaSelector ? (composers as never[]) : []
+      ),
+    };
+    const adapter = new TikTokAdapter({ root: root as any, MutationObserver: Ctor as any });
+
+    const seen: unknown[][] = [];
+    adapter.observe(() => {}, (found) => seen.push(found));
+    expect(seen).toHaveLength(1);
+
+    captured!();
+    expect(seen).toHaveLength(1);
+
+    const fresh = { tagName: 'TEXTAREA' };
+    composers.push(fresh);
+    captured!();
+    expect(seen).toHaveLength(2);
+    expect(seen[1]).toEqual([fresh]);
+  });
 });

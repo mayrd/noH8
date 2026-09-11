@@ -52,7 +52,7 @@ function styles(el: UiElement, values: Record<string, string>): void {
  * `trigger` on any close path.
  */
 export function openAnalysisModal(options: ModalOptions): UiElement {
-  const { doc, comment, analysis, windowRef, trigger, clipboard } = options;
+  const { doc, comment, analysis, windowRef, trigger, clipboard, draftWarning } = options;
 
   const overlay = doc.createElement('div');
   overlay.setAttribute?.('data-noh8-modal-overlay', 'true');
@@ -135,6 +135,26 @@ export function openAnalysisModal(options: ModalOptions): UiElement {
   closeBtn.addEventListener?.('click', () => closeModal(overlay, trigger));
   append(header, closeBtn);
   append(card, header);
+
+  // (L3) Pre-post warning: a flagged own-draft shows an i18n banner above the
+  // analysis so the user sees the verdict before posting.
+  if (draftWarning) {
+    const warning = doc.createElement('div');
+    warning.setAttribute?.('data-noh8-draft-warning', 'true');
+    if (warning.dataset) warning.dataset['noh8DraftWarning'] = 'true';
+    warning.setAttribute?.('role', 'alert');
+    warning.textContent = draftWarning;
+    styles(warning, {
+      background: '#fff1f1',
+      border: '1px solid #f5b5b5',
+      borderRadius: '10px',
+      padding: '8px 10px',
+      marginTop: '10px',
+      color: '#b00020',
+      fontWeight: '600',
+    });
+    append(card, warning);
+  }
 
   // Section heading helper
   const section = (heading: string): void => {

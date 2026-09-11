@@ -104,6 +104,27 @@ describe('rainbow button a11y', () => {
     expect(button.attrs['type']).toBe('button');
     expect(button.attrs['aria-label']).toContain('NoH8');
   });
+
+  test('the flagged draft-review button exposes its warning state accessibly (L3)', async () => {
+    const doc = makeDoc();
+    const composer = new FakeEl('div');
+    const textarea = new FakeEl('textarea');
+    textarea.value = 'nazis like you should be exterminated';
+    composer.appendChild(textarea);
+    renderDraftReviewButton({
+      textarea: textarea as never,
+      platform: 'youtube',
+      doc,
+      analyze: vi.fn(async () => analyzeCommentText({ id: 'draft-x', text: textarea.value ?? '' })),
+    });
+
+    const button = textarea.nextSibling as unknown as FakeEl;
+    button.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // Screen-reader users learn the draft is flagged without opening the modal.
+    expect(button.attrs['aria-pressed']).toBe('true');
+  });
 });
 
 describe('prefers-reduced-motion handling', () => {

@@ -76,6 +76,27 @@ npm test                  # Run full Vitest suite
 npm run package:firefox   # Package Firefox build in dist-firefox/
 ```
 
+## Privacy
+
+NoH8 is privacy-first and runs **100% on-device**. Nothing leaves your browser.
+
+- **Inference** runs locally in an offscreen document via
+  `@xenova/transformers` (ONNX WebAssembly/WebGPU). No comment text, analysis
+  result, or user data is sent to any server.
+- The **only** network use is downloading ML models from the Hugging Face Hub
+  into `chrome.storage.local`, on the user's behalf and only when the user opts
+  in from the model manager.
+- **No telemetry, no analytics, no crash reporting, no remote configuration.**
+- `chrome.storage.sync` is used only for user preferences (enabled platforms,
+  draft-review toggle, calibration thresholds). Flagged-comment and model-state
+  data lives in `chrome.storage.local` and never leaves the browser.
+- No third-party scripts, no tracking, no ads.
+
+When filling out a store's privacy questionnaire, mark data collection as **no**
+for browsing history, cookies, and personal data; mark data use as **no** for
+data sharing with third parties; and describe model downloads as the sole
+network activity. See `docs/LAUNCH_CHECKLIST.md` for the full disclosure text.
+
 ## Implementation Plan
 See [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) for the full phased roadmap.
 

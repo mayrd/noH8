@@ -180,6 +180,20 @@ export default class InstagramAdapter extends BaseAdapter {
     return comments;
   }
 
+  /**
+   * List the currently rendered comment composers (L3). Uses the adapter's
+   * `commentTextareaSelector` — never a hard-coded selector.
+   */
+  extractComposers(): ElementLike[] {
+    if (!this.root || !this.commentTextareaSelector) return [];
+    try {
+      const list = this.root.querySelectorAll(this.commentTextareaSelector);
+      return Array.from(list as ArrayLike<ElementLike>);
+    } catch {
+      return [];
+    }
+  }
+
   private percent(score: number): string {
     return `${Math.round(Math.min(1, Math.max(0, score)) * 100)}%`;
   }
@@ -204,9 +218,14 @@ export default class InstagramAdapter extends BaseAdapter {
   }
 
   /** Watches the DOM for infinite scroll / dynamically added comments. */
-  observe(onNewCommentsFound: (comments: CommentData[]) => void): void {
+  observe(
+    onNewCommentsFound: (comments: CommentData[]) => void,
+    onComposersFound?: (composers: ElementLike[]) => void
+  ): void {
     // Start from an empty set so the first scan reports any existing comments.
     const seen = new Set<string>();
+    // L3: composer dedup — the same set of elements re-scanned never re-fires.
+    const seenComposers = new Set<ElementLike>();
 
     const scan = (): void => {
       const fresh: CommentData[] = [];
@@ -216,6 +235,15 @@ export default class InstagramAdapter extends BaseAdapter {
         fresh.push(comment);
       }
       if (fresh.length > 0) onNewCommentsFound(fresh);
+
+      // L3: report exactly the composers that appeared since the previous
+      // scan so SPA re-renders yield a fresh button per composer, never
+      // duplicates.
+      if (onComposersFound) {
+        const freshComposers = this.extractComposers().filter((el) => !seenComposers.has(el));
+        for (const el of freshComposers) seenComposers.add(el);
+        if (freshComposers.length > 0) onComposersFound(freshComposers);
+      }
     };
 
     // Report anything already rendered on first boot.
