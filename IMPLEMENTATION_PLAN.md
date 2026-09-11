@@ -526,16 +526,17 @@ negatives.
       (2). No new permissions and no network beyond the sanctioned Hugging
       Face Hub fetch. `npm run check` green
       (50 files / 450 tests + typecheck + build).
+| --- | --- | --- | --- | --- | --- |
 
-### M18 — On-device performance telemetry *(transparency, local-only)* ⬜ TODO
+### M18 — On-device performance telemetry *(transparency, local-only)* ✅ DONE
 
 M10 made scanning fast but invisible; users can't see what a scan costs.
 
-- [ ] Record per-comment inference latency and queue-wait in memory; persist a
+- [x] Record per-comment inference latency and queue-wait in memory; persist a
       rolling histogram to `chrome.storage.local` (local-only, never synced).
-- [ ] Surface a "Performance" section in settings (median/p95 latency, cache
+- [x] Surface a "Performance" section in settings (median/p95 latency, cache
       hit rate) with a reset button.
-- [ ] Acceptance: histogram aggregation unit tests; storage round-trip test;
+- [x] Acceptance: histogram aggregation unit tests; storage round-trip test;
       settings rendering test; architecture guard test asserting no
       `chrome.storage.sync` and no network use in the telemetry module.
 
