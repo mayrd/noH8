@@ -64,6 +64,23 @@ export interface DetectedIssue {
  * Full on-device analysis produced for a single comment. Everything here is
  * computed locally in the user's browser; no text ever leaves the page.
  */
+export interface ModelVerdict {
+  /** Stable catalog id of the model that produced this verdict. */
+  modelId: string;
+  /** Human-readable model name, resolved offscreen for modal display. */
+  modelName?: string;
+  /** Whether this model alone flagged the comment as hate speech. */
+  isHateSpeech: boolean;
+  /** This model's confidence (0..1) that the comment contains hate speech. */
+  hateSpeechScore: number;
+  /** This model's continuous sentiment score (-1..+1). */
+  sentimentScore: number;
+}
+
+/**
+ * Full on-device analysis produced for a single comment. Everything here is
+ * computed locally in the user's browser; no text ever leaves the page.
+ */
 export interface CommentAnalysis {
   commentId: string;
   sentiment: Sentiment;
@@ -71,4 +88,10 @@ export interface CommentAnalysis {
   /** Confidence (0..1) that the comment contains hate speech. */
   hateSpeechScore: number;
   issues: DetectedIssue[];
+  /**
+   * (M17) Per-model verdicts when multi-model consensus ran (secondary model
+   * configured and downloaded). Undefined for single-model and heuristic
+   * analyses; the analysis modal renders a per-model section when present.
+   */
+  perModel?: ModelVerdict[];
 }

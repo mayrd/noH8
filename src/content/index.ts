@@ -1,7 +1,9 @@
 import { getEnabledAdapters } from './adapters/registry';
 import { initSettingsStore, settingsStore } from '../settings/settingsStore';
+import { initModelStore, modelStore } from '../settings/modelStore';
 import { inferComment } from './analysis/inferenceClient';
 import { createInferenceScheduler } from './analysis/inferenceScheduler';
+import { analysisModelKey } from './analysis/consensus';
 import { renderCommentControls } from './ui/commentUi';
 import { renderDraftReviewButton } from './ui/commentUi';
 import type { UiDocument, UiElement, UiWindow } from './ui/commentUi';
@@ -23,6 +25,17 @@ const scheduler = createInferenceScheduler({
   infer: (comment) => inferComment({ id: comment.commentId, text: comment.text }),
   concurrency: 2,
 });
+
+/**
+ * Model configuration in force for newly scheduled comments (M17). Read
+ * live from the shared model store — which is hydrated before `start()` and
+ * stays in sync across contexts via `chrome.storage.onChanged` — so the
+ * scheduler cache keys every entry to the exact model configuration that
+ * computed it (primary id, or `primary+secondary` while consensus runs).
+ */
+function currentModelKey(): string {
+  return analysisModelKey(modelStore.getState());
+}
 
 /**
  * Highlight and scroll to a comment element when requested by the sidepanel.
@@ -96,6 +109,10 @@ function start(): void {
               // replies and the reply is scored with its parent's text.
               parentText: comment.parentText,
               parentId: comment.parentId,
+              // (M17) Scope the cache to the model configuration in force
+              // when this comment is scheduled, so switching models (or the
+              // consensus pair) re-infers instead of serving stale results.
+              modelId: currentModelKey(),
             }).then((analysis) => {
               if (!comment.elementRef) return; // comment detached while analysing
 
@@ -153,7 +170,13 @@ function start(): void {
               platform: adapter.platformName,
               doc: asUiDocument(document),
               windowRef: asUiWindow(window),
-              analyze: (draft) => scheduler.schedule({ commentId: draft.id, text: draft.text }),
+              analyze: (draft) =>
+                scheduler.schedule({
+                  commentId: draft.id,
+                  text: draft.text,
+                  // (M17) Draft reviews share the model-scoped cache.
+                  modelId: currentModelKey(),
+                }),
               author: 'You',
             });
           });
@@ -165,6 +188,6 @@ function start(): void {
     });
 }
 
-// Hydrate persisted settings (falls back to defaults when unavailable),
-// then start monitoring the page.
-initSettingsStore().finally(start);
+// Hydrate persisted settings and model state (falls back to defaults when
+// unavailable), then start monitoring the page.
+Promise.all([initSettingsStore(), initModelStore()]).finally(start);

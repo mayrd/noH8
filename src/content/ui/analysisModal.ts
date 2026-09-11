@@ -178,6 +178,37 @@ export function openAnalysisModal(options: ModalOptions): UiElement {
   });
   append(card, hateLine);
 
+  // (M17) Multi-model consensus: when the analysis carries per-model verdicts,
+  // show each model's own verdict so agreement (or a disagreement) stays
+  // inspectable instead of collapsing into a single score.
+  if (analysis.perModel && analysis.perModel.length > 0) {
+    section(t('modal.section.consensus'));
+    const consensus = doc.createElement('div');
+    if (consensus.dataset) consensus.dataset['noh8Consensus'] = 'true';
+    styles(consensus, {
+      background: '#f7f5ff',
+      border: '1px solid #e2d9fb',
+      borderRadius: '10px',
+      padding: '8px 10px',
+      marginBottom: '6px',
+    });
+    for (const verdict of analysis.perModel) {
+      const row = doc.createElement('div');
+      const percent = Math.round(verdict.hateSpeechScore * 100);
+      row.textContent = t(
+        verdict.isHateSpeech ? 'modal.consensus.flagged' : 'modal.consensus.notFlagged',
+        { name: verdict.modelName ?? verdict.modelId, percent }
+      );
+      styles(row, {
+        color: verdict.isHateSpeech ? '#b00020' : '#1a7f37',
+        fontSize: '13px',
+        marginBottom: '2px',
+      });
+      append(consensus, row);
+    }
+    append(card, consensus);
+  }
+
   // Detected issues
   section(t('modal.section.issues'));
   if (analysis.issues.length > 0) {

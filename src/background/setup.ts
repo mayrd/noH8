@@ -88,6 +88,8 @@ export async function seedModelSettings(): Promise<void> {
 
   const defaults: ModelStorageState = {
     selectedModelId: DEFAULT_MODEL_STORAGE.selectedModelId,
+    // (M17) Seed the consensus field so fresh installs match the store shape.
+    secondaryModelId: null,
     downloadedModels: [],
     modelStatus: {},
     downloadProgress: {},

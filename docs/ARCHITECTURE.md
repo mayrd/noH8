@@ -94,7 +94,7 @@ flowchart TB
 - **`index.ts`** — boots all enabled platform adapters after hydrating the settings store; wires discovered comments to inference; renders controls and draft-review buttons; listens for `noh8:highlightComment` from the sidepanel.
 - **`platformConfig.ts`** — single source of per-platform host match patterns used to scope the manifest and runtime permissions.
 - **`adapters/`** — concrete platform adapters (`youtubeAdapter.ts`, `instagramAdapter.ts`, `facebookAdapter.ts`, `tiktokAdapter.ts`) extending `BaseAdapter`. `selectorStrategy.ts` provides fallback container selection.
-- **`analysis/`** — `inferenceClient.ts` (offscreen client wrapper), `inferenceScheduler.ts` (concurrency-capped, deduplicating, caching scheduler wrapping the client), and `sentimentAnalyzer.ts` (deterministic keyword heuristic fallback).
+- **`analysis/`** — `inferenceClient.ts` (offscreen client wrapper), `inferenceScheduler.ts` (concurrency-capped, deduplicating, caching scheduler wrapping the client; cache scoped per model configuration), `consensus.ts` (pure multi-model consensus merge + model-key helpers), and `sentimentAnalyzer.ts` (deterministic keyword heuristic fallback).
 - **`ui/`** — modularized UI layer:
   - `uiTypes.ts` — structural DOM and UI option interfaces.
   - `commentUi.ts` — entry point and rainbow button generator.
@@ -118,7 +118,7 @@ flowchart TB
 
 ### Settings layer (`src/settings/`)
 - **`settingsStore.ts`** (→ `chrome.storage.sync`) — enabled platforms, review drafts preference, and permissions.
-- **`modelStore.ts`** (→ `chrome.storage.local`) — selected model, downloaded models, and download progress.
+- **`modelStore.ts`** (→ `chrome.storage.local`) — selected model, secondary (consensus) model, downloaded models, and download progress.
 - **`onboarding.ts`** — first-run `noh8_onboarded` flag helpers and the `needsOnboarding` predicate used by the popup/sidepanel setup nudges.
 - **`Welcome.tsx`** (→ `welcome.html`) — first-run welcome flow: privacy promise, platform toggles (permission requests), first model download; persists the onboarding flag on completion or skip.
 - **React UI** — `SettingsPage`, `ModelManager`, and `SettingsPopup`.

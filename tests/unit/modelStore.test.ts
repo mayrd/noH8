@@ -35,6 +35,7 @@ describe('ModelStore', () => {
     // Reset the shared singleton so tests are independent of execution order.
     modelStore.setState({
       selectedModelId: DEFAULT_MODEL_ID,
+      secondaryModelId: null,
       downloadedModels: [],
       modelStatus: {},
       downloadProgress: {},
@@ -58,6 +59,7 @@ describe('ModelStore', () => {
       {
         [STORAGE_KEY]: {
           selectedModelId: 'sst-2-english',
+          secondaryModelId: null,
           downloadedModels: [],
           modelStatus: {},
           downloadProgress: {},
@@ -75,6 +77,7 @@ describe('ModelStore', () => {
       {
         [STORAGE_KEY]: {
           selectedModelId: DEFAULT_MODEL_ID,
+          secondaryModelId: null,
           downloadedModels: [],
           modelStatus: {},
           downloadProgress: { 'toxic-bert': 64 },
@@ -158,4 +161,67 @@ describe('ModelStore', () => {
     modelStore.getState().markModelDownloaded('toxic-bert');
     expect(modelStore.getState().modelFailures).not.toHaveProperty('toxic-bert');
   });
+
+  // --- M17: secondary (consensus) model selection ---
+
+  test('defaults to no secondary model (M17)', () => {
+    expect(modelStore.getState().secondaryModelId).toBeNull();
+  });
+
+  test('selecting a secondary model updates state and persists it (M17)', () => {
+    modelStore.getState().setSecondaryModel('sst-2-english');
+    expect(modelStore.getState().secondaryModelId).toBe('sst-2-english');
+    expect(localSet).toHaveBeenCalledWith(
+      {
+        [STORAGE_KEY]: {
+          selectedModelId: DEFAULT_MODEL_ID,
+          secondaryModelId: 'sst-2-english',
+          downloadedModels: [],
+          modelStatus: {},
+          downloadProgress: {},
+        },
+      },
+      expect.any(Function)
+    );
+  });
+
+  test('clearing the secondary model removes it from storage (M17)', () => {
+    modelStore.getState().setSecondaryModel('sst-2-english');
+    modelStore.getState().setSecondaryModel(null);
+    expect(modelStore.getState().secondaryModelId).toBeNull();
+    const write = localSet.mock.calls.at(-1)?.[0] as Record<string, unknown>;
+    const snapshot = write[STORAGE_KEY] as Record<string, unknown>;
+    expect(snapshot['secondaryModelId']).toBeNull();
+  });
+
+  test('refuses to select the primary model as its own secondary (M17)', () => {
+    modelStore.getState().setSelectedModel('sst-2-english');
+    modelStore.getState().setSecondaryModel('sst-2-english');
+    expect(modelStore.getState().secondaryModelId).toBeNull();
+  });
+
+  test('hydrates the secondary selection from storage (M17)', async () => {
+    localGet.mockImplementation((key, cb) =>
+      cb({
+        [STORAGE_KEY]: { selectedModelId: DEFAULT_MODEL_ID, secondaryModelId: 'twitter-roberta' },
+      })
+    );
+    await initModelStore();
+    expect(modelStore.getState().secondaryModelId).toBe('twitter-roberta');
+  });
+
+  test('keeps the secondary selection in sync from storage changes (M17)', async () => {
+    await initModelStore(); // registers the storage.onChanged listener
+    fireStorageChanged({
+      [STORAGE_KEY]: {
+        newValue: {
+          selectedModelId: DEFAULT_MODEL_ID,
+          secondaryModelId: 'twitter-roberta',
+          downloadedModels: ['twitter-roberta'],
+        },
+      },
+    } as any);
+    expect(modelStore.getState().secondaryModelId).toBe('twitter-roberta');
+  });
+
 });

@@ -42,6 +42,13 @@ export interface SchedulableComment {
   depth?: number;
   /** (M14) Parent comment id used for parent-before-child scheduling. */
   parentId?: string;
+  /**
+   * (M17) Model configuration the analysis is computed with (primary id, or
+   * `primary+secondary` while consensus is active — see `analysisModelKey`).
+   * Cache entries are scoped to it so switching models never serves stale
+   * analyses from another model.
+   */
+  modelId?: string;
 }
 
 export interface SchedulerOptions {
@@ -60,9 +67,11 @@ export interface InferenceScheduler {
   clearCache: () => void;
 }
 
-/** Stable identity for a comment's analysis: id plus the analysed text. */
+/** Stable identity for a comment's analysis: id, text, and — (M17) the model
+ * configuration it was computed with, so switching models never serves a
+ * stale cached analysis from another model. */
 function cacheKeyFor(comment: SchedulableComment): string {
-  return `${comment.commentId}::${comment.text}`;
+  return `${comment.commentId}::${comment.text}::${comment.modelId ?? ''}`;
 }
 
 /** A queued or running unit of inference work. */

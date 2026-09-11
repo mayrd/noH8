@@ -38,6 +38,7 @@ NoH8 uses `Transformers.js` with ONNX WebAssembly/WebGPU to analyze social media
 - ✅ Per-comment rainbow action buttons, detailed sentiment/issue modals, and draft review
 - ✅ False-positive dismissal (per-comment) and one-click JSON export of flagged comments
 - ✅ Concurrency-limited, deduplicating inference scheduler so comment bursts never overwhelm the pipeline
+- ✅ Multi-model consensus — optionally require a downloaded second model to agree before a comment is flagged, with per-model scores in the analysis modal
 - ✅ Chrome Manifest v3 extension with Firefox build path
 - ✅ First-run welcome page: privacy promise, per-platform toggles, and a one-click first model download (never shown twice)
 - ✅ Accessibility & i18n: ARIA `role`/`aria-label` semantics on injected buttons and the analysis modal, full keyboard path (`Escape` closes the modal and returns focus to the trigger), `prefers-reduced-motion` handling for the rainbow animation, and a typed single-source `i18n` catalog (`en`-first, locale resolved from `chrome.i18n.getUILanguage()` with no new permissions)

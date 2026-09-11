@@ -121,4 +121,39 @@ describe('openAnalysisModal', () => {
     overlay.findByData('noh8Close')!.click();
     expect(overlay.removed).toBe(true);
   });
+
+  // --- M17: model-consensus section ---
+
+  test('renders no consensus section for a single-model analysis (M17)', () => {
+    const doc = makeDoc();
+    const analysis = analyzeCommentText(COMMENT);
+
+    openAnalysisModal({ doc, comment: COMMENT, analysis });
+
+    const overlay = (doc.body as unknown as FakeEl).findByData('noh8ModalOverlay')!;
+    expect(overlay.findByData('noh8Consensus')).toBeNull();
+  });
+
+  test('lists every model verdict when a consensus analysis is shown (M17)', () => {
+    const doc = makeDoc();
+    const analysis = analyzeCommentText(COMMENT);
+    const consensus: CommentAnalysis = {
+      ...analysis,
+      perModel: [
+        { modelId: 'toxic-bert', modelName: 'Toxic-BERT', isHateSpeech: true, hateSpeechScore: 0.9, sentimentScore: -0.8 },
+        { modelId: 'sst-2-english', isHateSpeech: false, hateSpeechScore: 0.05, sentimentScore: 0.2 },
+      ],
+    };
+
+    openAnalysisModal({ doc, comment: COMMENT, analysis: consensus });
+
+    const section = (doc.body as unknown as FakeEl).findByData('noh8Consensus')!;
+    expect(section).not.toBeNull();
+    const fullText = section.joinedText();
+    expect(fullText).toContain('Toxic-BERT');
+    expect(fullText).toContain('sst-2-english');
+    expect(fullText).toContain('90');
+    expect(fullText).toContain('5');
+  });
+
 });

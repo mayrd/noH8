@@ -6,12 +6,15 @@ import { describe, test, expect, vi, beforeEach } from 'vitest';
 // Mock the model store with a controlled (mutatable) state so tests can drive
 // per-model status and download progress and re-render.
 const setSelectedModel = vi.fn();
+const setSecondaryModel = vi.fn();
 const storeState = {
   selectedModelId: 'toxic-bert',
+  secondaryModelId: null as string | null,
   downloadedModels: ['toxic-bert'],
   modelStatus: { 'sst-2-english': 'not_downloaded' },
   downloadProgress: {} as Record<string, number>,
   setSelectedModel,
+  setSecondaryModel,
 };
 vi.mock('../../src/settings/modelStore', () => ({
   useModelStore: () => storeState,
@@ -31,6 +34,7 @@ describe('ModelManager', () => {
     vi.clearAllMocks();
     // Reset the shared mutable store to a known state.
     storeState.selectedModelId = 'toxic-bert';
+    storeState.secondaryModelId = null;
     storeState.downloadedModels = ['toxic-bert'];
     storeState.modelStatus = { 'sst-2-english': 'not_downloaded' };
     storeState.downloadProgress = {};
@@ -177,5 +181,35 @@ describe('ModelManager', () => {
   test('shows no stale-model warning while the selected model is in the catalog', () => {
     render(<ModelManager />);
     expect(screen.queryByTestId('stale-model-warning')).not.toBeInTheDocument();
+  });
+
+  // --- M17: secondary (consensus) model selection ---
+
+  test('renders a consensus checkbox for every model card (M17)', () => {
+    render(<ModelManager />);
+    MODEL_CATALOG.forEach((model) => {
+      expect(screen.getByTestId(`secondary-${model.id}`)).toBeInTheDocument();
+    });
+  });
+
+  test('checking a consensus box selects that model as secondary (M17)', async () => {
+    const user = userEvent.setup();
+    render(<ModelManager />);
+    // 'sst-2-english' is not the selected model, so its box is enabled.
+    await user.click(screen.getByTestId('secondary-sst-2-english'));
+    expect(setSecondaryModel).toHaveBeenCalledWith('sst-2-english');
+  });
+
+  test('unchecking the secondary model clears the selection (M17)', async () => {
+    storeState.secondaryModelId = 'sst-2-english';
+    const user = userEvent.setup();
+    render(<ModelManager />);
+    await user.click(screen.getByTestId('secondary-sst-2-english'));
+    expect(setSecondaryModel).toHaveBeenCalledWith(null);
+  });
+
+  test('the selected model cannot be its own secondary (M17)', () => {
+    render(<ModelManager />);
+    expect(screen.getByTestId('secondary-toxic-bert')).toBeDisabled();
   });
 });

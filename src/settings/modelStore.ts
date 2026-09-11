@@ -19,6 +19,12 @@ export type ModelStatusId = 'not_downloaded' | 'downloading' | 'ready' | 'error'
 
 export interface ModelStorageState {
   selectedModelId: string;
+  /**
+   * (M17) Optional secondary model for consensus scoring (flag only on
+   * agreement). Null means single-model analysis. Consensus is only applied
+   * when the secondary is downloaded (see `resolveConsensusModelId`).
+   */
+  secondaryModelId: string | null;
   downloadedModels: string[];
   modelStatus: Record<string, ModelStatusId>;
   /** Per-model download progress as a percentage (0–100), shown in the settings UI. */
@@ -29,6 +35,12 @@ export interface ModelStore extends ModelStorageState {
   /** (M16) Classified download failures keyed by model id. In-memory only. */
   modelFailures: Record<string, ModelFailureKind>;
   setSelectedModel: (id: string) => void;
+  /**
+   * (M17) Configure/clear the secondary (consensus) model. Persisted like the
+   * primary selection. A no-op when `id` equals the primary model — a model
+   * cannot agree with itself.
+   */
+  setSecondaryModel: (id: string | null) => void;
   markModelDownloaded: (id: string) => void;
   unmarkModelDownloaded: (id: string) => void;
   setModelStatus: (id: string, status: ModelStatusId) => void;
@@ -43,6 +55,8 @@ export interface ModelStore extends ModelStorageState {
 
 export const DEFAULT_MODEL_STORAGE: ModelStorageState = {
   selectedModelId: DEFAULT_MODEL_ID,
+  /** (M17) No consensus by default — single-model analysis out of the box. */
+  secondaryModelId: null,
   downloadedModels: [],
   modelStatus: {},
   downloadProgress: {},
@@ -65,6 +79,7 @@ function writeStorage(next: ModelStore): void {
   if (typeof chrome === 'undefined' || !chrome.storage?.local) return;
   const snapshot: ModelStorageState = {
     selectedModelId: next.selectedModelId,
+    secondaryModelId: next.secondaryModelId,
     downloadedModels: next.downloadedModels,
     modelStatus: next.modelStatus,
     downloadProgress: next.downloadProgress,
@@ -80,6 +95,12 @@ export const createModelStore = () =>
       modelFailures: {} as Record<string, ModelFailureKind>,
       setSelectedModel: (id) => {
         set({ selectedModelId: id });
+        writeStorage(get());
+      },
+      setSecondaryModel: (id) => {
+        // (M17) A model cannot agree with itself — ignore self-selection.
+        if (id !== null && id === get().selectedModelId) return;
+        set({ secondaryModelId: id });
         writeStorage(get());
       },
       markModelDownloaded: (id) => {
@@ -128,6 +149,8 @@ export async function initModelStore(): Promise<void> {
   if (persisted) {
     modelStore.setState({
       selectedModelId: persisted.selectedModelId ?? DEFAULT_MODEL_ID,
+      // (M17) Older persisted states predate the field — default to none.
+      secondaryModelId: persisted.secondaryModelId ?? null,
       downloadedModels: persisted.downloadedModels ?? [],
       modelStatus: persisted.modelStatus ?? {},
       downloadProgress: persisted.downloadProgress ?? {},
@@ -141,6 +164,9 @@ export async function initModelStore(): Promise<void> {
       const next = change.newValue as ModelStorageState;
       modelStore.setState({
         selectedModelId: next.selectedModelId ?? modelStore.getState().selectedModelId,
+        // (M17) Cross-context secondary sync (settings ↔ offscreen ↔ content).
+        secondaryModelId:
+          next.secondaryModelId ?? modelStore.getState().secondaryModelId ?? null,
         downloadedModels: next.downloadedModels ?? modelStore.getState().downloadedModels,
         modelStatus: next.modelStatus ?? modelStore.getState().modelStatus,
         downloadProgress: next.downloadProgress ?? modelStore.getState().downloadProgress,

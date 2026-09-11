@@ -26,7 +26,7 @@ function statusFor(
  * catalog of suitable Transformers.js models.
  */
 const ModelManager: React.FC = () => {
-  const { selectedModelId, downloadedModels, modelStatus, downloadProgress, setSelectedModel } =
+  const { selectedModelId, secondaryModelId, downloadedModels, modelStatus, downloadProgress, setSelectedModel, setSecondaryModel } =
     useModelStore();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -109,6 +109,7 @@ const ModelManager: React.FC = () => {
           const status = statusFor(model.id, downloadedModels, modelStatus);
           const statusMeta = STATUS_LABELS[status];
           const isSelected = selectedModelId === model.id;
+          const isSecondary = secondaryModelId === model.id;
           const canDownload = status === 'not_downloaded' || status === 'error';
           const isDownloaded = downloadedModels.includes(model.id);
           const isBusy = busyId === model.id;
@@ -181,6 +182,33 @@ const ModelManager: React.FC = () => {
                   {notice.text}
                 </p>
               )}
+
+              {/* M17: secondary (consensus) selection — a comment is only flagged
+                  when the primary and secondary models agree. */}
+              <label className="mt-4 flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  data-testid={`secondary-${model.id}`}
+                  checked={isSecondary}
+                  disabled={isSelected}
+                  onChange={() => setSecondaryModel(isSecondary ? null : model.id)}
+                  aria-label={t('models.consensus.aria', { name: model.name })}
+                  title={
+                    isSelected
+                      ? t('models.consensus.disabledSelf')
+                      : t('models.consensus.hint')
+                  }
+                  className="mt-0.5 accent-noh8-600"
+                />
+                <span className="flex-1">
+                  <span className="text-xs font-medium text-gray-700 block">
+                    {t('models.consensus.label')}
+                  </span>
+                  <span className="text-xs text-gray-500 block mt-0.5">
+                    {t('models.consensus.hint')}
+                  </span>
+                </span>
+              </label>
 
               {/* M16: classified failure explanation + retry affordance */}
               {status === 'error' && (

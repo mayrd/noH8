@@ -10,6 +10,7 @@ import {
   truncateParentContext,
   mergeCommentAnalyses,
 } from '../content/analysis/threadContext';
+import { mergeConsensus, resolveConsensusModelId } from '../content/analysis/consensus';
 import { modelStore } from '../settings/modelStore';
 import { MSG } from '../shared/messages';
 import { recordInferenceHealth } from '../shared/inferenceHealth';
@@ -200,32 +201,78 @@ export async function analyzeWithModel(
  * M14 (thread context): when a reply's `parentText` is supplied, the model
  * runs twice — once on the reply alone and once on the truncated parent
  * prepended to the reply — and the two analyses are merged conservatively
- * (flag if either crosses the threshold). Falls back to the built-in heuristic
- * analyser (which applies the same context semantics) whenever the model
- * pipeline cannot be loaded or fails, so analysis never blocks the UI.
+ * (flag if either crosses the threshold).
+ *
+ * M17 (multi-model consensus): when a secondary model is configured *and*
+ * downloaded, every input runs through both models (each reusing the M14
+ * context path) and a comment is flagged only if both agree; each model's
+ * individual verdict travels in the returned `perModel` field for the modal.
+ * A failing secondary degrades to the primary result rather than blocking.
+ *
+ * Falls back to the built-in heuristic analyser (which applies the same
+ * context semantics) whenever the model pipeline cannot be loaded or fails,
+ * so analysis never blocks the UI.
  */
 export async function analyzeComment(
   text: string,
   commentId: string,
   parentText?: string
 ): Promise<CommentAnalysis> {
-  const modelId = modelStore.getState().selectedModelId;
+  const store = modelStore.getState();
+  const modelId = store.selectedModelId;
+  const consensusModelId = resolveConsensusModelId({
+    primaryModelId: modelId,
+    secondaryModelId: store.secondaryModelId,
+    downloadedModels: store.downloadedModels,
+  });
   try {
-    const replyAlone = await analyzeWithModel(text, modelId);
-    let merged = replyAlone;
-    if (parentText) {
-      const contextText = truncateParentContext(parentText) + ' ' + text;
-      const replyWithContext = await analyzeWithModel(contextText, modelId);
-      merged = mergeCommentAnalyses(replyAlone, replyWithContext);
-    }
+    const primary = await analyzeWithContext(text, parentText, modelId);
     // M13: apply the locally-learned calibration at result-ingestion time —
     // a raw score below the calibrated threshold is downgraded to
     // not_flagged (the raw score stays available for the modal).
-    const calibrated = await calibrateAnalysis({ ...merged, commentId }, modelId);
+    const calibratedPrimary = await calibrateAnalysis(
+      { ...primary, commentId },
+      modelId
+    );
+    if (!consensusModelId) {
+      // (M16) Record a healthy inference so the sidepanel can clear its
+      // heuristic-fallback badge.
+      recordInferenceHealth({ fallbackActive: false, modelId, updatedAt: Date.now() });
+      return { ...primary, ...calibratedPrimary, commentId };
+    }
+    let secondary: CommentAnalysis;
+    try {
+      const secondaryRaw = await analyzeWithContext(text, parentText, consensusModelId);
+      secondary = await calibrateAnalysis(
+        { ...secondaryRaw, commentId },
+        consensusModelId
+      );
+    } catch (error) {
+      // (M17) A failing secondary must not silence the primary: consensus
+      // quietly degrades to the primary result for this comment.
+      console.warn(
+        `[NoH8] secondary model inference failed (${consensusModelId}), using primary result:`,
+        error
+      );
+      recordInferenceHealth({ fallbackActive: false, modelId, updatedAt: Date.now() });
+      return { ...primary, ...calibratedPrimary, commentId };
+    }
+    const consensus = mergeConsensus([
+      {
+        analysis: calibratedPrimary,
+        modelId,
+        modelName: findModelDescriptor(modelId)?.name,
+      },
+      {
+        analysis: secondary,
+        modelId: consensusModelId,
+        modelName: findModelDescriptor(consensusModelId)?.name,
+      },
+    ]);
     // (M16) Record a healthy inference so the sidepanel can clear its
     // heuristic-fallback badge.
     recordInferenceHealth({ fallbackActive: false, modelId, updatedAt: Date.now() });
-    return { ...merged, ...calibrated, commentId };
+    return { ...consensus, commentId };
   } catch (error) {
     console.warn(
       `[NoH8] model inference failed (${modelId}), using heuristic fallback:`,
@@ -236,4 +283,21 @@ export async function analyzeComment(
     recordInferenceHealth({ fallbackActive: true, modelId, updatedAt: Date.now() });
     return analyzeCommentText({ id: commentId, text, parentText });
   }
+}
+
+/**
+ * Run one comment's text through a single catalog model, reusing the M14
+ * reply-with-context path (reply alone, then reply with the truncated parent
+ * prepended, merged conservatively). Throws if the model cannot be loaded.
+ */
+async function analyzeWithContext(
+  text: string,
+  parentText: string | undefined,
+  modelId: string
+): Promise<CommentAnalysis> {
+  const replyAlone = await analyzeWithModel(text, modelId);
+  if (!parentText) return replyAlone;
+  const contextText = truncateParentContext(parentText) + ' ' + text;
+  const replyWithContext = await analyzeWithModel(contextText, modelId);
+  return mergeCommentAnalyses(replyAlone, replyWithContext);
 }

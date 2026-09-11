@@ -442,7 +442,7 @@ of this repo follow the strict TDD protocol in §7.
 
 ## Next Milestones (post-M14 roadmap)
 
-The M7–M16 arc is complete; the milestones below extend robustness, quality,
+The M7–M17 arc is complete; the milestones below extend robustness, quality,
 and usability on the same privacy-first constraints (no network beyond the
 sanctioned Hugging Face Hub model fetch, no telemetry, no new host origins
 without sign-off).
@@ -483,18 +483,49 @@ heuristic fallback with no recovery path in the UI.
       No new permissions and no network beyond the sanctioned Hugging Face Hub
       fetch. `npm run check` green (47 files / 376 tests + typecheck + build).
 
-### M17 — Multi-model consensus *(detection quality)* ⬜ TODO
+### M17 — Multi-model consensus *(detection quality)* ✅ DONE
 
 A single model is a single point of failure for both false positives and false
 negatives.
 
-- [ ] Allow selecting a secondary model in settings; when both are downloaded,
-      run consensus scoring (flag only if both agree; keep per-model scores in
-      the analysis modal).
-- [ ] Reuse the scheduler: consensus runs are two inferences per comment, so
-      the concurrency cap and cache must key on `commentId::text::modelId`.
-- [ ] Acceptance: consensus merge unit tests (agree/disagree/quorum),
-      scheduler cache-key test, settings tests for secondary-model selection.
+- [x] `src/settings/modelStore.ts`: `secondaryModelId: string | null`
+      (`setSecondaryModel`, persisted in `ModelStorageState`, hydrated and
+      synced cross-context; a self-selection as secondary is a no-op since a
+      model cannot agree with itself).
+- [x] `src/content/analysis/consensus.ts`: pure `mergeConsensus` (quorum merge —
+      flagged only when enough models agree, unanimous by default; consensus
+      score is the weakest member; sentiment prefers the less-negative
+      reading; issues unioned with `hate_speech` dropped on disagreement;
+      every verdict kept in the merged `perModel` field), pure
+      `resolveConsensusModelId` (secondary must be distinct *and* downloaded),
+      and `analysisModelKey` (`primary+secondary` while consensus runs).
+- [x] `src/offscreen/inference.ts`: `analyzeComment` reuses the M14
+      reply-with-context path per model (via `analyzeWithContext`) when a
+      downloaded secondary is configured; each model's calibrated (M13)
+      opinion feeds consensus, model names resolve into the verdicts, and a
+      failing secondary degrades to the primary result instead of blocking.
+- [x] `src/content/analysis/inferenceScheduler.ts`: cache identity is now
+      `commentId::text::modelId`; `src/content/index.ts` hydrates `modelStore`
+      at boot and keys every schedule (comments + draft reviews) with the
+      live `analysisModelKey`.
+- [x] Modal (`analysisModal.ts`) renders a "Model consensus" section with one
+      row per verdict when `perModel` is present; `ModelManager.tsx` offers a
+      per-card consensus checkbox (disabled for the selected model); new
+      `models.consensus.*` / `modal.consensus.*` i18n keys.
+- [x] Acceptance mapping: consensus merge (agree/disagree/quorum) +
+      `resolveConsensusModelId` + `analysisModelKey` →
+      `tests/unit/consensus.test.ts` (16); offscreen two-model
+      end-to-end (agree/disagree/per-model context runs/single-path
+      fallbacks/secondary-failure degradation) →
+      `tests/unit/offscreenConsensus.test.ts` (8); scheduler cache-key
+      tests → `tests/unit/inferenceScheduler.test.ts` M17 block (4);
+      store state machine (persist/hydrate/sync/self-selection guard) →
+      `tests/unit/modelStore.test.ts` M17 block (6); secondary selection
+      interaction → `tests/unit/ModelManager.test.tsx` M17 block (4);
+      consensus modal rows → `tests/unit/analysisModal.test.ts` M17 block
+      (2). No new permissions and no network beyond the sanctioned Hugging
+      Face Hub fetch. `npm run check` green
+      (50 files / 450 tests + typecheck + build).
 
 ### M18 — On-device performance telemetry *(transparency, local-only)* ⬜ TODO
 
@@ -641,8 +672,8 @@ lifecycle are per-platform and under-tested.
 
 ### 8.6 Post-launch roadmap
 
-M17 (multi-model consensus) → M18 (performance telemetry) → M19 (settings
-search & shortcuts), exactly as scoped above. M17 first: it improves detection
+M18 (performance telemetry) → M19 (settings search & shortcuts), exactly as
+scoped above. M17 (multi-model consensus) is done: it improves detection
 quality with zero new permissions. None blocks launch.
 
 ### 8.5 Per-platform acceptance-criteria matrix *(the GA gate)*

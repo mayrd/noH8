@@ -263,4 +263,47 @@ describe('inferenceScheduler (thread context, M14)', () => {
     await flushMicrotasks();
     expect(scheduler.pendingCount()).toBe(0);
   });
+
+describe('inferenceScheduler (model-scoped cache, M17)', () => {
+  test('caches per model: the same comment under another model re-infers', async () => {
+    const infer = vi.fn(async (input: InferInput) => analysisFor(input.commentId));
+    const scheduler = createInferenceScheduler({ infer });
+
+    await scheduler.schedule({ commentId: 'c1', text: 'hello', modelId: 'model-a' });
+    await scheduler.schedule({ commentId: 'c1', text: 'hello', modelId: 'model-b' });
+
+    expect(infer).toHaveBeenCalledTimes(2);
+  });
+
+  test('reuses the cache when comment, text and model all match', async () => {
+    const infer = vi.fn(async (input: InferInput) => analysisFor(input.commentId));
+    const scheduler = createInferenceScheduler({ infer });
+
+    await scheduler.schedule({ commentId: 'c1', text: 'hello', modelId: 'model-a' });
+    await scheduler.schedule({ commentId: 'c1', text: 'hello', modelId: 'model-a' });
+
+    expect(infer).toHaveBeenCalledTimes(1);
+  });
+
+  test('unscoped schedules still reuse the cache among themselves', async () => {
+    const infer = vi.fn(async (input: InferInput) => analysisFor(input.commentId));
+    const scheduler = createInferenceScheduler({ infer });
+
+    await scheduler.schedule({ commentId: 'c1', text: 'hello' });
+    await scheduler.schedule({ commentId: 'c1', text: 'hello' });
+
+    expect(infer).toHaveBeenCalledTimes(1);
+  });
+
+  test('a consensus model-pair key re-infers after the pair changes', async () => {
+    const infer = vi.fn(async (input: InferInput) => analysisFor(input.commentId));
+    const scheduler = createInferenceScheduler({ infer });
+
+    await scheduler.schedule({ commentId: 'c1', text: 'hello', modelId: 'a+b' });
+    await scheduler.schedule({ commentId: 'c1', text: 'hello', modelId: 'a+c' });
+
+    expect(infer).toHaveBeenCalledTimes(2);
+  });
+});
+
 });

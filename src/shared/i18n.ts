@@ -154,6 +154,16 @@ export const en = {
   'models.staleSelected':
     'The selected model "{modelId}" is no longer available in the catalog. Please choose another model below.',
 
+  // M17 — multi-model consensus
+  'modal.section.consensus': 'Model consensus',
+  'modal.consensus.flagged': '⚠ {name} flagged it ({percent}% confidence)',
+  'modal.consensus.notFlagged': '✓ {name} did not flag it ({percent}% confidence)',
+  'models.consensus.label': 'Require this model to agree (consensus)',
+  'models.consensus.hint':
+    'When this model and the selected model are both downloaded, a comment is only flagged if both agree. Per-model scores stay visible in the analysis.',
+  'models.consensus.aria': 'Require {name} to agree (consensus second opinion)',
+  'models.consensus.disabledSelf': 'The selected model cannot be its own second opinion.',
+
   // M16 — sidepanel heuristic-fallback badge
   'sidepanel.fallbackBadge': 'Heuristic fallback — model unavailable',
 
