@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { recordLatency, buildHistogram, resetHistogram, getPerformanceStats } from '../performanceTelemetry';
+import { recordLatency, buildHistogram, resetHistogram, getPerformanceStats } from '../../src/content/analysis/performanceTelemetry';
 
 describe('Performance Telemetry', () => {
   beforeEach(() => {
@@ -62,7 +62,8 @@ describe('Performance Telemetry', () => {
         recordLatency(i * 10);
       }
       const histogram = buildHistogram();
-      expect(histogram.p95).toBe(950);
+      // 100 values: 0, 10, 20, ..., 990. p95 index = ceil(100*0.95)-1 = 94 → value 940.
+      expect(histogram.p95).toBe(940);
     });
   });
 
