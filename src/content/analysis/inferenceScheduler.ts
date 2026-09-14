@@ -173,6 +173,27 @@ export function createInferenceScheduler(options: SchedulerOptions): InferenceSc
     pump();
   }
 
+  /**
+   * Release a single still-deferred reply whose parent never arrived (e.g.
+   * the parent parsed to nothing — empty text — so it was never scheduled).
+   * Without this, the reply's promise never settles and (via the content
+   * script's `.then(renderCommentControls)`) its rainbow button never
+   * renders. The timer fires on a later macrotask so a parent scheduled
+   * synchronously after the child (same scan burst) still wins ordering.
+   */
+  function releaseOrphan(parentId: string, job: Job): void {
+    setTimeout(() => {
+      const waiting = pendingChildren.get(parentId);
+      if (!waiting) return;
+      const idx = waiting.indexOf(job);
+      if (idx === -1) return;
+      waiting.splice(idx, 1);
+      if (waiting.length === 0) pendingChildren.delete(parentId);
+      enqueue(job);
+      pump();
+    }, 0);
+  }
+
   return {
     schedule(comment: SchedulableComment): Promise<CommentAnalysis> {
       const key = cacheKeyFor(comment);
@@ -187,11 +208,13 @@ export function createInferenceScheduler(options: SchedulerOptions): InferenceSc
       scheduledIds.add(comment.commentId);
 
       // Parent-before-child (M14): defer a reply until its parent has been
-      // scheduled, so the parent is analysed (and cached) first.
+      // scheduled, so the parent is analysed (and cached) first. An orphan
+      // safety timer releases the reply when the parent never arrives.
       if (comment.parentId && !scheduledIds.has(comment.parentId)) {
         const waiting = pendingChildren.get(comment.parentId) || [];
         waiting.push(job);
         pendingChildren.set(comment.parentId, waiting);
+        releaseOrphan(comment.parentId, job);
         return job.promise;
       }
 

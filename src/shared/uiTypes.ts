@@ -34,6 +34,13 @@ export interface UiElement {
   /** Smooth-scroll support used by the sidepanel "Jump to comment" flow. */
   scrollIntoView?(arg?: { behavior?: string; block?: string }): void;
   /**
+   * Open shadow root of a custom element (e.g. YouTube's `ytd-*` renderers).
+   * Real DOM exposes this as `ShadowRoot`; typed structurally so unit tests
+   * can fake it. `querySelectorAll` on a host element does NOT pierce into
+   * here, so comment queries must explicitly descend through it.
+   */
+  shadowRoot?: UiElement | null;
+  /**
    * Programmatic click, used by the report flow to activate a temporary
    * `target="_blank" rel="noopener noreferrer"` anchor (L2). Real DOM
    * elements expose it; fakes may fire recorded handlers.

@@ -52,11 +52,87 @@ export interface CommentSelectors {
 
 /**
  * Array-form wrapper around `root.querySelectorAll(selector)` that always
- * returns a real `ElementLike[]`.
+ * returns a real `ElementLike[]`. Also descends into open shadow roots
+ * (e.g. YouTube's `ytd-*` custom elements render `#content-text` inside a
+ * `shadowRoot` that host-level `querySelectorAll` cannot see), so comments
+ * hidden inside shadow DOM are still found at query time.
+ *
+ * Guarded against pathological DOMs: traversal depth is capped and each
+ * node is visited once, so cyclic `shadowRoot` fakes cannot hang the scan.
  */
 export function queryAll(root: RootLike, selector: string): ElementLike[] {
-  const list = root.querySelectorAll(selector);
-  return Array.from(list as ArrayLike<ElementLike>);
+  const found: ElementLike[] = [];
+  const seenElements = new Set<ElementLike>();
+  const visitedNodes = new Set<unknown>();
+  // Roots that expose shadow content (real ShadowRoot or the UiElement
+  // structural seam) are descended into explicitly.
+  interface Shadowed {
+    shadowRoot?: unknown;
+  }
+  const MAX_SHADOW_DEPTH = 8;
+  const queue: Array<{ node: RootLike | ElementLike; depth: number }> = [
+    { node: root, depth: 0 },
+  ];
+  const enqueueShadow = (host: unknown, depth: number): void => {
+    if (depth >= MAX_SHADOW_DEPTH) return;
+    const sr = (host as Shadowed).shadowRoot;
+    if (
+      sr &&
+      typeof (sr as RootLike).querySelectorAll === 'function' &&
+      !visitedNodes.has(sr)
+    ) {
+      queue.push({ node: sr as RootLike, depth: depth + 1 });
+    }
+  };
+  while (queue.length > 0) {
+    const entry = queue.shift();
+    if (!entry) continue;
+    const { node, depth } = entry;
+    if (visitedNodes.has(node)) continue;
+    visitedNodes.add(node);
+    let list: ArrayLike<ElementLike>;
+    try {
+      list = node.querySelectorAll(selector) as ArrayLike<ElementLike>;
+    } catch {
+      continue;
+    }
+    for (const el of Array.from(list)) {
+      if (!seenElements.has(el)) {
+        seenElements.add(el);
+        found.push(el);
+      }
+    }
+    // Descend into the node's own shadow root (a shadow root passed
+    // directly has no shadowRoot of its own, so this is a no-op for it).
+    enqueueShadow(node, depth);
+    // Matches inside a shadow tree are invisible to the host-level query
+    // above (real DOM `querySelectorAll` never pierces shadow boundaries),
+    // so also queue every *directly known* child host's shadow root. The
+    // breadth-first queue keeps this bounded by the visited set.
+    if (depth < MAX_SHADOW_DEPTH) {
+      for (const el of Array.from(list)) enqueueShadow(el, depth);
+    }
+  }
+  return found;
+}
+
+/**
+ * Shadow-piercing `querySelector`: return the first element matching
+ * `selector` in light DOM, falling back to a breadth-first search of open
+ * shadow roots. Never throws — returns null when nothing matches or the
+ * selector itself is unsupported.
+ */
+export function queryOne(
+  root: { querySelector?: ((selector: string) => ElementLike | null) | undefined } & RootLike,
+  selector: string
+): ElementLike | null {
+  try {
+    const direct = root.querySelector?.(selector) ?? null;
+    if (direct) return direct;
+  } catch {
+    return null;
+  }
+  return queryAll(root, selector)[0] ?? null;
 }
 
 // One-time warning throttle for "primary selector yielded no nodes".

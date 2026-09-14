@@ -3,6 +3,8 @@ import type { CommentData, AnalysisResult } from '../../shared/types';
 import { getMatchesForPlatform } from '../platformConfig';
 import {
   selectCommentContainers,
+  queryAll,
+  queryOne,
   type CommentSelectors,
 } from './selectorStrategy';
 import { findParsedAncestor, type ParsedCommentInfo } from './replyContext';
@@ -117,8 +119,10 @@ export default class InstagramAdapter extends BaseAdapter {
   }
 
   private queryAll(el: RootLike | ElementLike, selector: string): ElementLike[] {
-    const list = el.querySelectorAll(selector);
-    return Array.from(list as ArrayLike<ElementLike>);
+    // Shared shadow-piercing query so text/anchors inside open shadow roots
+    // (YouTube custom elements, future-proofing for the other platforms)
+    // still resolve instead of silently yielding nothing.
+    return queryAll(el, selector);
   }
 
   private hash(input: string): string {
@@ -130,7 +134,7 @@ export default class InstagramAdapter extends BaseAdapter {
   }
 
   private resolveAuthor(item: ElementLike): string {
-    const anchor = item.querySelector?.(AUTHOR_SELECTOR);
+    const anchor = queryOne(item, AUTHOR_SELECTOR);
     return (anchor?.textContent ?? '').trim() || 'unknown';
   }
 

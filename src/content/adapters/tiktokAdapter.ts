@@ -3,6 +3,8 @@ import type { CommentData, AnalysisResult } from '../../shared/types';
 import { getMatchesForPlatform } from '../platformConfig';
 import {
   selectCommentContainers,
+  queryAll,
+  queryOne,
   type CommentSelectors,
 } from './selectorStrategy';
 
@@ -103,8 +105,8 @@ export default class TikTokAdapter extends BaseAdapter {
   }
 
   private queryAll(item: ElementLike | RootLike, selector: string): ElementLike[] {
-    const list = item.querySelectorAll(selector);
-    return Array.from(list as ArrayLike<ElementLike>);
+    // Shared shadow-piercing query (see youtubeAdapter for rationale).
+    return queryAll(item, selector);
   }
 
   private hash(input: string): string {
@@ -116,7 +118,7 @@ export default class TikTokAdapter extends BaseAdapter {
   }
 
   private resolveAuthor(item: ElementLike): string {
-    const anchor = item.querySelector?.(AUTHOR_SELECTOR);
+    const anchor = queryOne(item, AUTHOR_SELECTOR);
     return (anchor?.textContent ?? '').trim() || 'unknown';
   }
 

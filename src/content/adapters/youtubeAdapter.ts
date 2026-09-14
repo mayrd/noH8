@@ -3,6 +3,8 @@ import type { CommentData, AnalysisResult } from '../../shared/types';
 import { getMatchesForPlatform } from '../platformConfig';
 import {
   selectCommentContainers,
+  queryAll,
+  queryOne,
   type CommentSelectors,
 } from './selectorStrategy';
 import {
@@ -104,8 +106,10 @@ export default class YouTubeAdapter extends BaseAdapter {
   }
 
   private queryAll(item: ElementLike | RootLike, selector: string): ElementLike[] {
-    const list = item.querySelectorAll(selector);
-    return Array.from(list as ArrayLike<ElementLike>);
+    // Shared shadow-piercing query: YouTube renders `#content-text` /
+    // `#author-text` inside the custom elements' open shadow roots, which a
+    // host-level `querySelectorAll` can never see.
+    return queryAll(item, selector);
   }
 
   private hash(input: string): string {
@@ -117,7 +121,8 @@ export default class YouTubeAdapter extends BaseAdapter {
   }
 
   private resolveAuthor(item: ElementLike): string {
-    const anchor = item.querySelector?.(AUTHOR_SELECTOR);
+    // Shadow-piercing lookup so `#author-text` inside a shadow root resolves.
+    const anchor = queryOne(item, AUTHOR_SELECTOR);
     return (anchor?.textContent ?? '').trim() || 'unknown';
   }
 

@@ -83,21 +83,36 @@ export function renderCommentControls(options: CommentControlsOptions): void {
     options;
   if (container.dataset?.['noh8RainbowButton'] === 'true') return;
 
-  if (container.setAttribute) container.setAttribute('data-noh8-controls', 'true');
-  if (container.dataset) container.dataset['noh8RainbowButton'] = 'true';
+  const markRendered = (): void => {
+    if (container.setAttribute) container.setAttribute('data-noh8-controls', 'true');
+    if (container.dataset) container.dataset['noh8RainbowButton'] = 'true';
+  };
 
   const button = createRainbowButton(doc, comment, analysis, windowRef);
 
   if (heartButtonSelector) {
-    const heart = container.querySelector?.(heartButtonSelector) ?? null;
-    const anchorParent = heart?.parentNode ?? null;
-    if (anchorParent && typeof anchorParent.insertBefore === 'function') {
-      // Place the rainbow button directly beneath the heart button.
-      anchorParent.insertBefore(button, heart?.nextSibling ?? null);
-      return;
+    try {
+      const heart = container.querySelector?.(heartButtonSelector) ?? null;
+      const anchorParent = heart?.parentNode ?? null;
+      if (anchorParent && typeof anchorParent.insertBefore === 'function') {
+        // Place the rainbow button directly beneath the heart button.
+        // The rendered flag is set only after a successful insert so a
+        // throwing selector (e.g. an unsupported `i` flag) never poisons
+        // later retries — they fall through to the default path below.
+        anchorParent.insertBefore(button, heart?.nextSibling ?? null);
+        markRendered();
+        return;
+      }
+    } catch {
+      // Fall through to the default append path below.
     }
   }
 
   // Default: append to the comment container.
-  container.appendChild?.(button);
+  try {
+    container.appendChild?.(button);
+    markRendered();
+  } catch {
+    // Leave unmarked so a later scan can retry the render.
+  }
 }
