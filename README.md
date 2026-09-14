@@ -123,6 +123,8 @@ In Settings, you can:
 
 ## How Reporting Works
 
+For detailed information about the reporting flow, see [docs/KNOWN_LIMITS.md](docs/KNOWN_LIMITS.md#report-deep-links).
+
 ### What NoH8 Does
 
 NoH8 helps you **document and report** hate speech you encounter on social media. Here's how the reporting flow works:
@@ -159,6 +161,8 @@ Before navigating to the platform's report flow, NoH8:
 - You control what to include in your report
 
 ## Known Limitations
+
+For a comprehensive list of known limitations, see [docs/KNOWN_LIMITS.md](docs/KNOWN_LIMITS.md).
 
 ### Selector Drift (L1)
 
@@ -233,6 +237,7 @@ When filling out a store's privacy questionnaire, mark data collection as **no**
 
 - Check this README for usage instructions
 - Review `docs/ARCHITECTURE.md` for technical details
+- See `docs/KNOWN_LIMITS.md` for known limitations and workarounds
 - Open an issue on GitHub for bugs or feature requests
 
 ### Privacy Promise

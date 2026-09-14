@@ -670,14 +670,14 @@ lifecycle are per-platform and under-tested.
 - [ ] Acceptance: `npm run check` green; `releaseVersion.test.ts` updated and
       passing; `docs/LAUNCH_CHECKLIST.md` ticked.
 
-### L5 — User-facing docs & support path *(pre-launch, non-blocking if timeboxed)* ⬜ TODO
+### L5 — User-facing docs & support path *(pre-launch, non-blocking if timeboxed)* ✅ DONE
 
-- [ ] README quick-start rewrite (install → welcome flow → first scan).
-- [ ] "How reporting works" section (official report entry points + local
+- [x] README quick-start rewrite (install → welcome flow → first scan).
+- [x] "How reporting works" section (official report entry points + local
       evidence copy).
-- [ ] Known-limitations page: selector drift (L1), heuristic-fallback badge
-      meaning (M16), model catalog sizes.
-- [ ] Acceptance: docs-only change; `npm run check` must stay green.
+- [x] Known-limitations page: selector drift (L1), heuristic-fallback badge
+      meaning (M16), model catalog sizes — see `docs/KNOWN_LIMITS.md`.
+- [x] Acceptance: docs-only change; `npm run check` green.
 
 ### 8.6 Post-launch roadmap
 
