@@ -603,6 +603,13 @@ flow, pass/fail, selector-drift notes).
 - [x] **Performance telemetry fix:** corrected import path and p95 assertion
       in `tests/unit/performanceTelemetry.test.ts` so the suite participates
       in `npm run check`.
+- [x] Slot-level ledger: `scripts/verificationLog.mjs` defines the
+      machine-readable live-run schema (`rowId:target:browser` keys, closed
+      pass/fail/pending + chrome/firefox vocabularies, `validateResultEntry`,
+      `summarizeResults`, pipe-safe `entryToDocRow`); `npm run verify` prints
+      one checklist line per slot (161 slots) and
+      `tests/unit/verifyWiring.test.ts` + `tests/unit/verificationLog.test.ts`
+      guard the renderer/wiring/validator (13 tests).
 - [ ] For each failing cell, file a selector-drift fix through
       `selectorStrategy.ts` secondary selectors — never weaken existing
       adapter assertions; add fixtures mirroring the new live DOM.

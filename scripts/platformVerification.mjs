@@ -218,19 +218,25 @@ const TARGET_LABELS = {
 /**
  * Render the matrix as a markdown checklist for manual live verification.
  * Pure function so the unit suite can audit its output.
+ *
+ * One line per (row, target, browser) slot so each live run is trackable via
+ * the `scripts/verificationLog.mjs` ledger (`rowId:target:browser` keys):
+ * per-platform cells expect a run on Chrome AND Firefox; cross-platform
+ * cells pin the browser to the target (browser === target).
  */
 export function renderVerificationChecklist(matrix = VERIFICATION_MATRIX) {
   const { ga, b } = countCells(matrix);
   const lines = [
     '# NoH8 — Live Platform Verification Checklist (L1)',
     '',
-    'Verify every cell below against the live site on Chrome and Firefox',
-    '(as applicable) and record the result in docs/PLATFORM_VERIFICATION.md',
-    'with: date, browser, version, platform, flow, pass/fail, drift notes.',
+    'Verify every slot below against the live site and record the result via',
+    'the `scripts/verificationLog.mjs` ledger (`rowId:target:browser` keys) and',
+    'in docs/PLATFORM_VERIFICATION.md with: date, browser, version, platform,',
+    'flow, pass/fail, drift notes.',
     '',
     `Cells: ${ga} GA · ${b} best-effort (B — ship with a documented caveat).`,
     '',
-    'Before verifying a cell, confirm a unit test for that criterion exists',
+    'Before verifying a slot, confirm a unit test for that criterion exists',
     'and passes (npm test) — every GA cell needs a repo test AND a live entry.',
     '',
   ];
@@ -242,9 +248,14 @@ export function renderVerificationChecklist(matrix = VERIFICATION_MATRIX) {
     }
     lines.push(`### ${row.id} — ${row.criterion}`, '');
     for (const cell of row.cells) {
-      lines.push(
-        `- [ ] ${row.id}:${cell.target} (${TARGET_LABELS[cell.target] ?? cell.target}, ${cell.grade}) — date: ____ · browser: ____ · version: ____ · result: pass/fail · drift notes: ____`
-      );
+      const slots =
+        row.flow === 'cross-platform' ? [cell.target] : [...BROWSERS];
+      for (const browser of slots) {
+        const key = `${row.id}:${cell.target}:${browser}`;
+        lines.push(
+          `- [ ] ${key} (${TARGET_LABELS[cell.target] ?? cell.target} on ${TARGET_LABELS[browser] ?? browser}, ${cell.grade}) — date: ____ · browser: ${browser} · version: ____ · result: pass/fail · drift notes: ____`
+        );
+      }
     }
     lines.push('');
   }

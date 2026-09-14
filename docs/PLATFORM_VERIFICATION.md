@@ -8,15 +8,23 @@
 > A cell is only done when (1) a unit test for the criterion exists in the
 > repo and passes (`npm test`), and (2) a live entry below records a pass on
 > the required browsers. Regenerate the printable checklist anytime with
-> `npm run verify` — it is rendered from `scripts/platformVerification.mjs`.
+> `npm run verify` — it is rendered from `scripts/platformVerification.mjs`
+> with one line per `rowId:target:browser` slot (see the
+> `scripts/verificationLog.mjs` ledger for the slot schema, validator, and
+> tally helpers). Record live runs per slot so per-platform rows close only
+> after both a Chrome and a Firefox pass; cross-platform rows pin
+> browser === target.
 >
 > For any failing cell, file a selector-drift fix through
 > `selectorStrategy.ts` secondary selectors — never weaken existing adapter
 > assertions — and add a fixture mirroring the new live DOM to that
 > platform's adapter suite (RED→GREEN).
 
-Status: **473 / 473 tests passing · 0 / 85 cells live-verified** (3 cells are
+Status: **490 / 490 tests passing · 0 / 85 cells live-verified** (3 cells are
 best-effort "B" and ship with a documented caveat in Known-Limitations, L5).
+Per-platform cells verify on both Chrome and Firefox, so `npm run verify`
+expands the matrix to 161 `rowId:target:browser` slots (see
+`scripts/verificationLog.mjs`).
 
 > **Test-coverage status (2026-09-11):** every GA cell has a passing unit test in
 > the repo (see per-cell "test" column below). The live-verification column
