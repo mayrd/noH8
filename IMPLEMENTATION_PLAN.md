@@ -540,15 +540,28 @@ M10 made scanning fast but invisible; users can't see what a scan costs.
       settings rendering test; architecture guard test asserting no
       `chrome.storage.sync` and no network use in the telemetry module.
 
-### M19 — Settings search & keyboard shortcuts *(usability)* — DEFERRED POST-LAUNCH ⬜
+### M19 — Settings search & keyboard shortcuts *(usability)* — SEARCH SHIPPED ⬜/✅
 
-- [ ] Filter-as-you-type search over settings sections (pure client-side
-      matching over the existing `src/shared/i18n.ts` catalog keys).
+- [x] Filter-as-you-type search over settings sections (pure client-side
+      matching over the existing `src/shared/i18n.ts` catalog keys) —
+      implemented in `src/settings/settingsSearch.ts` (pure
+      `normalizeSearchQuery`/`matchesSection`/`filterSettingsSections`,
+      diacritics-aware) and wired into `SettingsPage` with a `role="search"`
+      landmark, `role="status"` result count + empty-state messaging,
+      and per-section `data-testid` gating (`platforms/handling/models`).
+- [x] Page-local keyboard shortcut: `/` focuses the search box, `Escape`
+      clears it (`SettingsPage` document keydown listener; no manifest
+      `commands`, no new permissions, no chrome API surface).
 - [ ] Keyboard shortcuts for common actions (open sidepanel, toggle platform)
       via the `commands` API — requires a `public/manifest.json` change, so
       coordinate per the boundaries in AGENTS.md before adding commands.
-- [ ] Acceptance: search unit tests (match, no-match, diacritics); shortcut
-      registration test against the manifest; `npm run check` green.
+      **Still deferred** (needs explicit sign-off).
+- [x] Acceptance (search slice): `tests/unit/settingsSearch.test.ts` (7:
+      normalize/diacritics, title/desc/keyword match, empty→all, no-match→[],
+      case-insensitive); `tests/unit/SettingsPage.test.tsx` M19 block (5:
+      live filtering, empty state, clear-restores, `/`-to-focus,
+      `Escape`-to-clear). Full gate green 2026-09-14: typecheck clean,
+      52 files / 485 tests passing, production build succeeds.
 
 > **Deferred:** M17–M19 are quality-of-life features, not launch blockers —
 > see the Launch Readiness Roadmap (§8) below, which re-prioritizes the next

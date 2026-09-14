@@ -155,5 +155,60 @@ describe('SettingsPage', () => {
     await user.click(screen.getByRole('button', { name: /reset learned calibration/i }));
     expect(resetLearnedCalibration).not.toHaveBeenCalled();
   });
+
+  // --- M19: settings search & keyboard shortcut -----------------------------
+
+  test('renders a search box that filters sections as you type', async () => {
+    const user = userEvent.setup();
+    render(<SettingsPage />);
+    const search = screen.getByRole('searchbox', { name: /search settings/i });
+    expect(screen.getByTestId('platforms-section')).toBeInTheDocument();
+    expect(screen.getByTestId('models-section')).toBeInTheDocument();
+
+    await user.type(search, 'drafts');
+    expect(screen.queryByTestId('platforms-section')).not.toBeInTheDocument();
+    expect(screen.getByTestId('handling-section')).toBeInTheDocument();
+    expect(screen.queryByTestId('models-section')).not.toBeInTheDocument();
+  });
+
+  test('shows an empty-state message when nothing matches', async () => {
+    const user = userEvent.setup();
+    render(<SettingsPage />);
+    await user.type(screen.getByRole('searchbox', { name: /search settings/i }), 'zzz-no-such-setting');
+    expect(screen.getByRole('status')).toHaveTextContent(/no settings match/i);
+    expect(screen.queryByTestId('platforms-section')).not.toBeInTheDocument();
+  });
+
+  test('clearing the search restores all sections', async () => {
+    const user = userEvent.setup();
+    render(<SettingsPage />);
+    const search = screen.getByRole('searchbox', { name: /search settings/i });
+    await user.type(search, 'drafts');
+    expect(screen.queryByTestId('platforms-section')).not.toBeInTheDocument();
+    await user.clear(search);
+    expect(screen.getByTestId('platforms-section')).toBeInTheDocument();
+    expect(screen.getByTestId('handling-section')).toBeInTheDocument();
+    expect(screen.getByTestId('models-section')).toBeInTheDocument();
+  });
+
+  test('pressing / focuses the search box', async () => {
+    const user = userEvent.setup();
+    render(<SettingsPage />);
+    const search = screen.getByRole('searchbox', { name: /search settings/i });
+    expect(search).not.toHaveFocus();
+    await user.keyboard('/');
+    expect(search).toHaveFocus();
+  });
+
+  test('pressing Escape in the search box clears the filter', async () => {
+    const user = userEvent.setup();
+    render(<SettingsPage />);
+    const search = screen.getByRole('searchbox', { name: /search settings/i });
+    await user.type(search, 'drafts');
+    expect(screen.queryByTestId('platforms-section')).not.toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(search).toHaveValue('');
+    expect(screen.getByTestId('platforms-section')).toBeInTheDocument();
+  });
 });
 

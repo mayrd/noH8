@@ -85,6 +85,11 @@ export const en = {
     'Optionally review your own comment drafts for harmful language before you post them.',
   'settings.reviewDrafts': 'Review my own comment drafts',
   'settings.reviewDraftsAria': 'Review own comment drafts',
+  // M19 — settings filter-as-you-type search (pure client-side, no network).
+  'settings.search.label': 'Search settings',
+  'settings.search.placeholder': 'Filter settings… (press / to focus)',
+  'settings.search.noResults': 'No settings match “{query}”.',
+  'settings.search.results': '{count} section{plural} match',
   'settings.reset': 'Reset to Defaults',
   'settings.reset.confirm':
     'Reset all settings to defaults?\n\nThis will restore the default platform selection and model choice.',
