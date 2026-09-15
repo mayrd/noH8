@@ -107,9 +107,22 @@ export function queryAll(root: RootLike, selector: string): ElementLike[] {
     enqueueShadow(node, depth);
     // Matches inside a shadow tree are invisible to the host-level query
     // above (real DOM `querySelectorAll` never pierces shadow boundaries),
-    // so also queue every *directly known* child host's shadow root. The
-    // breadth-first queue keeps this bounded by the visited set.
+    // so descend into every *known* descendant's shadow root too. Modern
+    // YouTube nests the comment body two shadow layers deep
+    // (ytd-comment-thread-renderer → ytd-comment-view-model → #content-text),
+    // so shadow roots of elements that do NOT match the selector themselves
+    // must still be visited. The universal query is bounded: every node is
+    // visited at most once (visitedNodes) and shadow descent is depth-capped,
+    // so pathological DOMs cannot hang the scan.
     if (depth < MAX_SHADOW_DEPTH) {
+      let descendants: ArrayLike<ElementLike> = [];
+      try {
+        descendants = node.querySelectorAll('*') as ArrayLike<ElementLike>;
+      } catch {
+        descendants = [];
+      }
+      for (const el of Array.from(descendants)) enqueueShadow(el, depth);
+      // Also keep the old behaviour: direct matches may themselves be hosts.
       for (const el of Array.from(list)) enqueueShadow(el, depth);
     }
   }

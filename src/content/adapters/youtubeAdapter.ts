@@ -43,12 +43,15 @@ const NoopMutationObserver = class {
  * YouTube DOM selector strategy.
  *
  * Comments are rendered as `ytd-comment-thread-renderer` containers which hold
- * one or more `ytd-comment-renderer` nodes. We lean on YouTube's custom-element
- * tags and stable `#content-text` / `#author-text` ids rather than hashed class
- * names.
+ * one or more `ytd-comment-renderer` nodes. Newer YouTube builds replace the
+ * renderer with a `ytd-comment-view-model` element (its comment body and
+ * author live inside the custom element's shadow tree, resolved by the
+ * shadow-piercing `queryOne`/`queryAll` helpers). We lean on YouTube's
+ * custom-element tags and stable `#content-text` / `#author-text` ids rather
+ * than hashed class names.
  */
 const COMMENT_PRIMARY_SELECTORS = ['ytd-comment-thread-renderer'];
-const COMMENT_SECONDARY_SELECTORS = ['ytd-comment-renderer'];
+const COMMENT_SECONDARY_SELECTORS = ['ytd-comment-renderer', 'ytd-comment-view-model'];
 
 /** Selector used to grab the comment body text. */
 const COMMENT_TEXT_SELECTOR = '#content-text';

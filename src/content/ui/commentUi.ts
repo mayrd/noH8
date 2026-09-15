@@ -64,6 +64,11 @@ export function createRainbowButton(
     verticalAlign: 'middle',
   });
 
+  // Sentiment outline (red = negative, green = positive): snapshot the
+  // analysis available at render time so the button state is visible
+  // immediately, even before async inference resolves.
+  applySentimentOutline(button, isLiveAnalysis(analysis) ? analysis.current : analysis);
+
   button.addEventListener?.('click', () => {
     // Resolve the analysis lazily so optimistic renders (which pass a
     // LiveAnalysis holder) open the modal with the resolved inference,
@@ -77,7 +82,34 @@ export function createRainbowButton(
   return button;
 }
 
-/** Type guard: a LiveAnalysis holder vs an already-resolved analysis. */
+/**
+ * Sentiment outline colors for the rainbow button. Negative sentiment gets a
+ * red outline, positive gets green; neutral keeps the default soft shadow.
+ */
+export const SENTIMENT_OUTLINE: Record<string, string> = {
+  negative: '2px solid #ef4444',
+  positive: '2px solid #22c55e',
+};
+
+/**
+ * Apply the sentiment outline to a rainbow button (green = positive, red =
+ * negative, none = neutral). Also stamps `data-noh8-sentiment` so the state
+ * is inspectable/testable without parsing inline styles.
+ */
+export function applySentimentOutline(button: UiElement, analysis: CommentAnalysis): void {
+  const label = analysis.sentiment.label;
+  if (button.dataset) button.dataset['noh8Sentiment'] = label;
+  button.setAttribute?.('data-noh8-sentiment', label);
+  if (!button.style) return;
+  const outline = SENTIMENT_OUTLINE[label];
+  if (outline) {
+    button.style['outline'] = outline;
+    button.style['outlineOffset'] = '1px';
+  } else {
+    button.style['outline'] = '';
+    button.style['outlineOffset'] = '';
+  }
+}
 function isLiveAnalysis(value: CommentAnalysis | LiveAnalysis): value is LiveAnalysis {
   return (
     typeof value === 'object' &&
@@ -219,4 +251,7 @@ export function updateRainbowAnalysis(
 ): void {
   const holder = liveHolderStore.get(button);
   if (holder) holder.current = analysis;
+  // Refresh the sentiment outline so buttons rendered optimistically (with a
+  // heuristic placeholder) pick up the resolved red/green state.
+  applySentimentOutline(button, analysis);
 }
