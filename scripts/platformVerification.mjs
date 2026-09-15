@@ -181,7 +181,7 @@ export const VERIFICATION_MATRIX = [
   {
     id: 'permissions-flow',
     flow: 'cross-platform',
-    criterion: 'Optional host permissions requested per platform via welcome-flow toggles',
+    criterion: 'Optional host permissions requested per platform via settings toggles',
     cells: BROWSERS.map((target) => ({ target, grade: 'GA' })),
   },
   {

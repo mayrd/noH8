@@ -68,18 +68,17 @@ describe('SettingsPopup', () => {
     expect(popupRoot.className).toMatch(/w-80|w-72|max-w-/);
   });
 
-  test('shows the welcome setup link when nothing is enabled (empty state)', async () => {
+  test('shows the settings setup link when nothing is enabled (empty state)', async () => {
     popupEnabledPlatforms = { youtube: false, instagram: false, facebook: false, tiktok: false };
-    const onOpenWelcome = vi.fn();
     const user = userEvent.setup();
-    render(<SettingsPopup onOpenSettings={onOpenSettings} onOpenWelcome={onOpenWelcome} />);
+    render(<SettingsPopup onOpenSettings={onOpenSettings} />);
     const setupButton = screen.getByRole('button', { name: /set up noh8/i });
     await user.click(setupButton);
-    expect(onOpenWelcome).toHaveBeenCalledTimes(1);
+    expect(onOpenSettings).toHaveBeenCalledTimes(1);
     popupEnabledPlatforms = { ...enabledPlatforms };
   });
 
-  test('hides the welcome setup link when a platform is enabled and the model is ready', () => {
+  test('hides the settings setup link when a platform is enabled and the model is ready', () => {
     popupEnabledPlatforms = { ...enabledPlatforms };
     render(<SettingsPopup onOpenSettings={onOpenSettings} />);
     expect(screen.queryByRole('button', { name: /set up noh8/i })).not.toBeInTheDocument();

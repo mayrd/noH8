@@ -12,12 +12,7 @@ if (container) {
     chrome.tabs.create({ url: settingsUrl });
   };
 
-  const onOpenWelcome = () => {
-    const welcomeUrl = chrome.runtime.getURL('welcome.html');
-    chrome.tabs.create({ url: welcomeUrl });
-  };
-
   createRoot(container).render(
-    <SettingsPopup onOpenSettings={onOpenSettings} onOpenWelcome={onOpenWelcome} />
+    <SettingsPopup onOpenSettings={onOpenSettings} />
   );
 }

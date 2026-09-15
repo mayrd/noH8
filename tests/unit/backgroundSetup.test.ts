@@ -32,7 +32,7 @@ import {
   ensureOffscreenDocument,
   runExtensionSetup,
   handleBackgroundMessage,
-  maybeOpenWelcomePage,
+  maybeOpenSettingsPage,
 } from '../../src/background/setup';
 
 describe('background setup (on-install initialisation)', () => {
@@ -111,33 +111,25 @@ describe('background setup (on-install initialisation)', () => {
   });
 });
 
-describe('welcome-page onboarding (M12)', () => {
+describe('first-run settings page (install opens the welcome settings)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     hasDocument.mockResolvedValue(false);
     storageGet.mockImplementation(
-      (key, cb) => cb({}) // empty storage => not yet onboarded
+      (key, cb) => cb({}) // empty storage => fresh install
     );
   });
 
-  test('opens the welcome page on install when not yet onboarded', async () => {
-    await maybeOpenWelcomePage('install');
+  test('opens the settings page on install', async () => {
+    await maybeOpenSettingsPage('install');
     expect(tabsCreate).toHaveBeenCalledTimes(1);
-    expect(tabsCreate.mock.calls[0][0].url).toContain('welcome.html');
+    expect(tabsCreate.mock.calls[0][0].url).toContain('settings.html');
   });
 
-  test('does not open the welcome page for non-install reasons (update/startup)', async () => {
-    await maybeOpenWelcomePage('update');
-    await maybeOpenWelcomePage('browser_update');
-    await maybeOpenWelcomePage('chrome_update');
-    expect(tabsCreate).not.toHaveBeenCalled();
-  });
-
-  test('does not open the welcome page once onboarding is complete', async () => {
-    storageGet.mockImplementation((key, cb) =>
-      cb({ noh8_onboarded: true })
-    );
-    await maybeOpenWelcomePage('install');
+  test('does not open the settings page for non-install reasons (update/startup)', async () => {
+    await maybeOpenSettingsPage('update');
+    await maybeOpenSettingsPage('browser_update');
+    await maybeOpenSettingsPage('chrome_update');
     expect(tabsCreate).not.toHaveBeenCalled();
   });
 });

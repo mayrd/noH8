@@ -4,7 +4,6 @@ import {
   type ModelStorageState,
 } from '../settings/modelStore';
 import type { NoH8Request, NoH8Response } from '../shared/messages';
-import { isOnboarded } from '../settings/onboarding';
 
 /**
  * Background service worker setup + routing.
@@ -59,19 +58,18 @@ export async function runExtensionSetup(): Promise<void> {
 }
 
 /**
- * Open the first-run welcome page, but only when the runtime event is an
- * actual install (not an update/browser restart) and the user has not yet
- * completed or skipped onboarding. The flag check makes this idempotent —
- * the page never auto-opens twice.
+ * Open the settings page on first install. The settings page doubles as the
+ * welcome screen (it carries the "How NoH8 works" guide), so there is no
+ * separate welcome flow or onboarding flag — opening `settings.html` once on
+ * a fresh install is enough.
  */
-export async function maybeOpenWelcomePage(reason: string | undefined): Promise<void> {
+export async function maybeOpenSettingsPage(reason: string | undefined): Promise<void> {
   if (reason !== 'install') return;
   if (typeof chrome === 'undefined' || !chrome.tabs?.create) return;
-  if (await isOnboarded()) return;
   try {
-    chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') });
+    chrome.tabs.create({ url: chrome.runtime.getURL('settings.html') });
   } catch (error) {
-    console.warn('[NoH8] could not open the welcome page:', error);
+    console.warn('[NoH8] could not open the settings page:', error);
   }
 }
 

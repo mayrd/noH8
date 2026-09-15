@@ -16,13 +16,22 @@ export interface CommentControlsOptions {
   /** The comment DOM container the rainbow button is appended to. */
   container: UiElement;
   comment: CommentData;
-  analysis: CommentAnalysis;
+  /** Resolved analysis or a live holder updated when async inference lands. */
+  analysis: CommentAnalysis | LiveAnalysis;
   doc: UiDocument;
   windowRef?: UiWindow;
-  /** Instagram-only: selector for the comment's heart/like button. When set and
-   * matched, the rainbow button is anchored beneath it; otherwise it is
-   * appended to the comment container (default). */
+  /** Platform anchor: Instagram heart button, YouTube Reply/action row, etc.
+   * When set and matched (shadow-piercing), the rainbow button is anchored
+   * next to it; otherwise it is appended to the comment container. */
   heartButtonSelector?: string;
+}
+
+/** Mutable holder for a comment's analysis so the modal always shows the
+ * latest value. Used for optimistic renders: the button appears instantly
+ * with a placeholder analysis, then the holder is updated when the async
+ * inference resolves. */
+export interface LiveAnalysis {
+  current: CommentAnalysis;
 }
 
 export interface ModalOptions {

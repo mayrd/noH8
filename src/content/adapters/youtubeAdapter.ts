@@ -57,6 +57,18 @@ const COMMENT_TEXT_SELECTOR = '#content-text';
 const AUTHOR_SELECTOR = '#author-text';
 
 /**
+ * Anchor for the rainbow button: YouTube's like/dislike/Reply action row.
+ * Each `ytd-comment-renderer` renders its toolbar inside its open shadow
+ * root as `#toolbar` containing `ytd-button-renderer#reply-button` (Reply)
+ * plus like/dislike buttons. Targeting the Reply button first keeps the
+ * rainbow icon in the same line as Like/Dislike/Reply; the toolbar /
+ * action-buttons fallbacks keep it in that row even if YouTube renames
+ * the Reply node.
+ */
+const REPLY_ANCHOR_SELECTOR =
+  '#reply-button, #toolbar, #action-buttons, ytd-comment-action-buttons-renderer';
+
+/**
  * Selector for the textarea / contenteditable element where the user composes
  * a new comment reply. YouTube's `ytd-commentbox` renders the composer as an
  * emoji-picker-wrapped editor that may be either a real <textarea> or a
@@ -79,11 +91,19 @@ export default class YouTubeAdapter extends BaseAdapter {
   };
   static readonly commentTextSelector = COMMENT_TEXT_SELECTOR;
   static readonly authorSelector = AUTHOR_SELECTOR;
+  /** Anchor for the rainbow button: the like/dislike/Reply action row. */
+  static readonly replyAnchorSelector = REPLY_ANCHOR_SELECTOR;
 
     platformName = 'youtube' as const;
 
   /** Domains/pages this adapter parses when opened in the browser. */
   hostPermissions: string[] = getMatchesForPlatform(this.platformName);
+
+  /**
+   * Anchor the rainbow button next to Reply (in the action row) instead of
+   * appended to the end of the comment container.
+   */
+  commentAnchorSelector = YouTubeAdapter.replyAnchorSelector;
 
   /** Selector identifying the comment composer textarea(s). */
   static readonly commentTextareaSelector = COMMENT_TEXTAREA_SELECTOR;
@@ -129,7 +149,17 @@ export default class YouTubeAdapter extends BaseAdapter {
   private resolveId(item: ElementLike, author: string, text: string): string {
     const attr = item.getAttribute?.('id') || item.getAttribute?.('data-comment-id');
     if (attr) return attr;
-    return `youtube-${this.hash(author + text)}`;
+    // Hash collisions (e.g. dozens of identical "lol" comments from the same
+    // author on a busy video) used to collapse many comments into one id, so
+    // `observe()` dedup dropped them and they never got a button. Suffix a
+    // per-element counter on collision so every parsed element stays unique.
+    const base = `youtube-${this.hash(author + text)}`;
+    if (!this.commentElements.has(base) || this.commentElements.get(base) === item) {
+      return base;
+    }
+    let n = 1;
+    while (this.commentElements.has(`${base}-${n}`)) n += 1;
+    return `${base}-${n}`;
   }
 
   private parseComment(item: ElementLike): CommentData | null {

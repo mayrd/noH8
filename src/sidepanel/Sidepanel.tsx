@@ -17,10 +17,10 @@ import {
   type InferenceHealth,
 } from '../shared/inferenceHealth';
 
-/** Opens the first-run welcome page in a new tab. */
-function openWelcomePage(): void {
+/** Opens the settings page (which doubles as the welcome screen) in a new tab. */
+function openSettingsPage(): void {
   if (typeof chrome !== 'undefined' && chrome.tabs?.create) {
-    chrome.tabs.create({ url: chrome.runtime.getURL('welcome.html') });
+    chrome.tabs.create({ url: chrome.runtime.getURL('settings.html') });
   }
 }
 
@@ -264,7 +264,7 @@ export const Sidepanel: React.FC = () => {
             </p>
             <button
               type="button"
-              onClick={openWelcomePage}
+              onClick={openSettingsPage}
               className="mt-4 px-4 py-2 text-xs font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-500 transition"
             >
               {t('sidepanel.setUp')}

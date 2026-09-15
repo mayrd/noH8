@@ -1,16 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { useSettingsStore } from '../settings/settingsStore';
 import { useModelStore } from '../settings/modelStore';
-import { needsOnboarding } from '../settings/onboarding';
+import type { Platform } from '../settings/types';
 import { t } from '../shared/i18n';
+
+/** Minimal slice of the model store used to decide whether setup is complete. */
+export interface PopupModelState {
+  selectedModelId: string;
+  downloadedModels: string[];
+  modelStatus: Record<string, string>;
+}
+
+/**
+ * Whether the user still needs the first-run setup: true when no platform is
+ * enabled or the selected model has not been downloaded/marked ready.
+ * Pure helper (no chrome/storage access) so the popup setup nudge stays testable.
+ */
+export function needsSetup(
+  enabledPlatforms: Record<Platform, boolean>,
+  model: PopupModelState
+): boolean {
+  const anyPlatformEnabled = Object.values(enabledPlatforms ?? {}).some(Boolean);
+  const modelReady =
+    Boolean(model?.selectedModelId) &&
+    (model.downloadedModels?.includes(model.selectedModelId) ||
+      model.modelStatus?.[model.selectedModelId] === 'ready');
+  return !anyPlatformEnabled || !modelReady;
+}
 
 interface SettingsPopupProps {
   onOpenSettings: () => void;
-  /** Opens the first-run welcome page (used by the empty-state setup nudge). */
-  onOpenWelcome?: () => void;
 }
 
-const SettingsPopup: React.FC<SettingsPopupProps> = ({ onOpenSettings, onOpenWelcome }) => {
+const SettingsPopup: React.FC<SettingsPopupProps> = ({ onOpenSettings }) => {
   const [flaggedCount, setFlaggedCount] = useState(0);
   const { enabledPlatforms } = useSettingsStore();
   const { selectedModelId, downloadedModels, modelStatus } = useModelStore();
@@ -36,11 +58,11 @@ const SettingsPopup: React.FC<SettingsPopupProps> = ({ onOpenSettings, onOpenWel
         </span>
       </header>
 
-      {/* First-run setup nudge: shown when nothing is enabled or no model is ready */}
-      {needsOnboarding(enabledPlatforms, { selectedModelId, downloadedModels, modelStatus }) && (
+      {/* Setup nudge: opens the settings page (the welcome screen) when nothing is enabled or no model is ready */}
+      {needsSetup(enabledPlatforms, { selectedModelId, downloadedModels, modelStatus }) && (
         <button
           type="button"
-          onClick={onOpenWelcome}
+          onClick={onOpenSettings}
           className="w-full mb-4 px-4 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-500 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
         >
           {t('sidepanel.setUp')}

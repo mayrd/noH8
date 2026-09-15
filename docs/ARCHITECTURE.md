@@ -14,7 +14,7 @@ messages over `chrome.runtime`:
 | Content script | `src/content/index.ts` | Injected into social pages; discovers comments in the DOM, runs on-device inference, and renders the NoH8 UI. |
 | Background service worker | `src/background/serviceWorker.ts` | Runs one-time setup, ensures the offscreen document exists, and relays messages to it. |
 | Offscreen document | `src/offscreen/index.ts` | Headless page hosting the heavy Transformers.js (`@xenova/transformers`) ONNX pipeline. |
-| Settings UI | `src/settings/main.tsx`, `SettingsPage.tsx`, popup | Lives in `settings.html` / `popup.html`; toggles platforms, manages model downloads, reviews drafts. |
+| Settings UI | `src/settings/main.tsx`, `SettingsPage.tsx`, popup | Lives in `settings.html` / `popup.html` (settings page doubles as the welcome screen); toggles platforms, manages model downloads, reviews drafts. |
 | Sidepanel Dashboard | `src/sidepanel/main.tsx`, `Sidepanel.tsx` | Lives in `sidepanel.html` (and Firefox sidebar); aggregates flagged comments live, allows issue filtering, and triggers jump-to-comment navigation. |
 
 Shared contracts: data shapes in `src/shared/types.ts`; the messaging wire
@@ -119,9 +119,7 @@ flowchart TB
 ### Settings layer (`src/settings/`)
 - **`settingsStore.ts`** (→ `chrome.storage.sync`) — enabled platforms, review drafts preference, and permissions.
 - **`modelStore.ts`** (→ `chrome.storage.local`) — selected model, secondary (consensus) model, downloaded models, and download progress.
-- **`onboarding.ts`** — first-run `noh8_onboarded` flag helpers and the `needsOnboarding` predicate used by the popup/sidepanel setup nudges.
-- **`Welcome.tsx`** (→ `welcome.html`) — first-run welcome flow: privacy promise, platform toggles (permission requests), first model download; persists the onboarding flag on completion or skip.
-- **React UI** — `SettingsPage`, `ModelManager`, and `SettingsPopup`.
+- **React UI** — `SettingsPage` (doubles as the welcome screen via the `SettingsGuide` "How NoH8 works" section: rainbow button, red/green verdict colors, draft review), `ModelManager`, and `SettingsPopup` (`needsSetup` predicate drives the popup/sidepanel setup nudges).
 
 ## 4. Storage & Permissions
 

@@ -133,7 +133,7 @@ expands the matrix to 161 `rowId:target:browser` slots (see
 | firefox-package | npm run package:firefox produces a correct transformed manifest | firefox | GA | firefoxManifest.test.ts / npm run package:firefox | — | — | pending | — |
 | offscreen-relay | Offscreen document created on install; messages relayed with relayed dedup | chrome | GA | offscreenContext.test.ts / backgroundSetup.test.ts | — | — | pending | — |
 | offscreen-relay | Offscreen document created on install; messages relayed with relayed dedup | firefox | GA | offscreenContext.test.ts / backgroundSetup.test.ts | — | — | pending | — |
-| permissions-flow | Optional host permissions requested per platform via welcome-flow toggles | chrome | GA | permissions.test.ts / onboarding.test.ts | — | — | pending | — |
-| permissions-flow | Optional host permissions requested per platform via welcome-flow toggles | firefox | GA | permissions.test.ts / onboarding.test.ts | — | — | pending | — |
+| permissions-flow | Optional host permissions requested per platform via settings toggles | chrome | GA | permissions.test.ts / settingsStore.test.ts | — | — | pending | — |
+| permissions-flow | Optional host permissions requested per platform via settings toggles | firefox | GA | permissions.test.ts / settingsStore.test.ts | — | — | pending | — |
 | no-network | No network beyond Hugging Face model fetch; no chrome.storage.sync for flags/telemetry (architecture guard tests) | chrome | GA | architecture guard tests (multiple suites) / platformVerification.test.ts | — | — | pending | — |
 | no-network | No network beyond Hugging Face model fetch; no chrome.storage.sync for flags/telemetry (architecture guard tests) | firefox | GA | architecture guard tests (multiple suites) / platformVerification.test.ts | — | — | pending | — |

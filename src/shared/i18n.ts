@@ -103,33 +103,25 @@ export const en = {
   'popup.openSettings': 'Open Settings',
   'popup.tagline': 'Privacy-first hate speech detection',
 
-  // Welcome (first-run) flow
-  'welcome.title': 'Welcome to NoH8',
-  'welcome.intro':
-    'NoH8 detects hate speech in social media comments in real time — 100% on your device.',
-  'welcome.intro.strong': 'Nothing leaves your browser.',
-  'welcome.intro.tail': 'No servers, no accounts, no tracking.',
-  'welcome.step1': '1. Choose platforms to protect',
-  'welcome.desc.youtube': 'Analyze YouTube comment threads',
-  'welcome.desc.instagram': 'Analyze Instagram comments',
-  'welcome.desc.facebook': 'Analyze Facebook comments',
-  'welcome.desc.tiktok': 'Analyze TikTok comments',
-  'welcome.step2': '2. Get the detection model',
-  'welcome.model.desc':
-    'Downloads once from the Hugging Face Hub, then runs offline on-device. Until it is ready a built-in keyword heuristic keeps analysis working.',
-  'welcome.model.selected': 'Model to download: {name}',
-  'welcome.step3': '3. Review your own drafts (optional)',
-  'welcome.drafts.desc':
-    'Also analyse your own comment drafts for sentiment and harmful language before you post them.',
-  'welcome.model.ready': '✓ Model is ready',
-  'welcome.model.download': 'Download model',
-  'welcome.model.downloading': 'Downloading…',
-  'welcome.model.progress': 'Downloading from Hugging Face… {percent}%',
-  'welcome.model.safeToLeave':
-    'You can safely click "Get started" or close this page — the download continues in the background.',
-  'welcome.model.failed': 'Download failed. Check your connection and try again.',
-  'welcome.skip': 'Skip',
-  'welcome.getStarted': 'Get started',
+  // Settings welcome guide (settings page doubles as the welcome screen)
+  'settings.guide.title': 'How NoH8 works',
+  'settings.guide.intro':
+    'NoH8 detects hate speech in social media comments in real time — 100% on your device. Nothing leaves your browser. No servers, no accounts, no tracking.',
+  'settings.guide.icon.title': 'The rainbow button',
+  'settings.guide.icon.desc':
+    'Every scanned comment gets a small rainbow button next to it. Click it to open that comment’s NoH8 analysis.',
+  'settings.guide.verdict.title': 'What the colors mean',
+  'settings.guide.verdict.flagged':
+    'Flagged (red) — NoH8 thinks the comment may contain hate speech, with a confidence score.',
+  'settings.guide.verdict.clean':
+    'Not flagged (green) — NoH8 did not detect hate speech in the comment.',
+  'settings.guide.verdict.issues':
+    'Each verdict lists the detected issues (hate speech, harassment, profanity, negative tone) so you can see why it was flagged.',
+  'settings.guide.drafts.title': 'Your own drafts',
+  'settings.guide.drafts.desc':
+    'When draft review is enabled below, a matching rainbow button appears next to your own comment box so you can review a draft before posting. A red outline means your draft was flagged.',
+  'settings.guide.privacy':
+    'All analysis runs 100% on-device in your browser. The detection model is downloaded once and then works offline.',
 
   // Model manager
   'models.title': 'Detection Model',

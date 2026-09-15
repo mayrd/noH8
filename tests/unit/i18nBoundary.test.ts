@@ -50,7 +50,7 @@ describe('i18n boundary', () => {
       'sidepanel/Sidepanel.tsx',
       'settings/SettingsPage.tsx',
       'settings/SettingsPopup.tsx',
-      'settings/Welcome.tsx',
+      'settings/SettingsGuide.tsx',
       'settings/ModelManager.tsx',
     ];
     for (const file of surfaces) {

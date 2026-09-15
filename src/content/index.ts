@@ -2,6 +2,7 @@ import { getEnabledAdapters } from './adapters/registry';
 import { initSettingsStore, settingsStore } from '../settings/settingsStore';
 import { initModelStore, modelStore } from '../settings/modelStore';
 import { inferComment } from './analysis/inferenceClient';
+import { analyzeCommentText } from './analysis/sentimentAnalyzer';
 import { createInferenceScheduler } from './analysis/inferenceScheduler';
 import { analysisModelKey } from './analysis/consensus';
 import { renderCommentControls } from './ui/commentUi';
@@ -128,6 +129,28 @@ function start(): void {
             if (!container) continue;
             commentElementMap.set(comment.id, container);
 
+            // Optimistic render: show the rainbow button instantly (sync
+            // heuristic placeholder) so busy videos with hundreds of queued
+            // comments don't wait on the concurrency-limited inference
+            // pipeline. The holder is swapped to the real result when the
+            // scheduled inference resolves, and the click handler reads it
+            // lazily — so the modal always shows the latest analysis.
+            const live = {
+              current: analyzeCommentText({
+                id: comment.id,
+                text: comment.text,
+                parentText: comment.parentText,
+              }),
+            };
+            renderCommentControls({
+              container,
+              comment,
+              analysis: live,
+              doc: asUiDocument(document),
+              windowRef: asUiWindow(window),
+              heartButtonSelector: adapter.commentAnchorSelector,
+            });
+
             scheduler.schedule({
               commentId: comment.id,
               text: comment.text,
@@ -140,6 +163,10 @@ function start(): void {
               // consensus pair) re-infers instead of serving stale results.
               modelId: currentModelKey(),
             }).then((analysis) => {
+              // Swap the optimistically rendered button's holder to the real
+              // result (no second button — renderCommentControls is a no-op
+              // once the flag is set).
+              live.current = analysis;
               if (!comment.elementRef) return; // comment detached while analysing
 
               if (analysis.isHateSpeech || analysis.issues.length > 0) {
@@ -168,15 +195,6 @@ function start(): void {
                   label: analysis.issues[0]?.label || 'Hate speech detected',
                 });
               }
-
-              renderCommentControls({
-                container,
-                comment,
-                analysis,
-                doc: asUiDocument(document),
-                windowRef: asUiWindow(window),
-                heartButtonSelector: adapter.commentAnchorSelector,
-              });
             });
           }
         },

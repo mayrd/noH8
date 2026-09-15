@@ -203,7 +203,7 @@ describe('Sidepanel Component', () => {
     anchorClick.mockRestore();
   });
 
-  test('empty state links to the welcome page for first-run setup', async () => {
+  test('empty state links to the settings page for first-run setup', async () => {
     const { tabsCreate } = setupMockChrome();
     useFlagStore.setState({ comments: [] });
     const user = userEvent.setup();
@@ -214,7 +214,7 @@ describe('Sidepanel Component', () => {
     const setupButton = screen.getByRole('button', { name: /set up noh8/i });
     await user.click(setupButton);
     expect(tabsCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ url: expect.stringContaining('welcome.html') })
+      expect.objectContaining({ url: expect.stringContaining('settings.html') })
     );
   });
 });
