@@ -1,6 +1,7 @@
 import { describe, test, expect, vi } from 'vitest';
 import YouTubeAdapter from '../../src/content/adapters/youtubeAdapter';
 import { getMatchesForPlatform } from '../../src/content/platformConfig';
+import { resetSelectorWarn } from '../../src/content/adapters/selectorStrategy';
 
 // --- Minimal DOM fakes (no jsdom required) ---
 
@@ -379,5 +380,50 @@ describe('YouTubeAdapter (reply threads, M14)', () => {
     expect(comments[0].parentId).toBeUndefined();
     expect(comments[0].parentText).toBeUndefined();
     expect(comments[0].depth).toBeUndefined();
+  });
+});
+
+/**
+ * L1 (`comments-secondary` cell): when the primary `ytd-comment-thread-renderer`
+ * selectors drift, the documented secondary set (`ytd-comment-renderer`,
+ * `ytd-comment-view-model`) must still yield fully parsed comments — and the
+ * drift must be logged once so regressions stay visible.
+ */
+describe('YouTubeAdapter selector drift → secondary fallback (L1)', () => {
+  test('extracts comments via the secondary selectors when the primary selectors drift', () => {
+    resetSelectorWarn();
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const { primary, secondary } = YouTubeAdapter.selectors;
+    expect(secondary).toBeTruthy();
+    expect(secondary!.length).toBeGreaterThan(0);
+
+    const commentEl = makeCommentEl('fallback comment text', 'drift_author', {
+      textSelector: YouTubeAdapter.commentTextSelector,
+    });
+    // Selector-faithful fake DOM: the drifted primary set matches nothing, the
+    // documented secondary set matches the fixture comment container.
+    const root = {
+      querySelectorAll: vi.fn((sel: string) =>
+        sel === primary.join(', ')
+          ? []
+          : sel === secondary!.join(', ')
+            ? [commentEl]
+            : []
+      ),
+    };
+
+    const adapter = new YouTubeAdapter({ root: root as any });
+    const comments = adapter.extractComments();
+
+    expect(comments).toHaveLength(1);
+    expect(comments[0].platform).toBe('youtube');
+    expect(comments[0].text).toBe('fallback comment text');
+    expect(comments[0].author).toBe('drift_author');
+    expect(comments[0].id).toBeTruthy();
+    expect(comments[0].elementRef).toBe(commentEl);
+    // Primary drift is logged (once, throttled) so it stays observable.
+    expect(warnSpy).toHaveBeenCalledTimes(1);
+    warnSpy.mockRestore();
   });
 });

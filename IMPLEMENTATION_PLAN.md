@@ -597,6 +597,16 @@ flow, pass/fail, selector-drift notes).
       matrix against the §8.5 shape (flow/criterion counts, GA/B grades, row
       id uniqueness), the checklist renderer output, doc coverage of every
       row, and the `verify` npm-script registration (8 tests).
+- [x] **Secondary-fallback fixture suites (2026-09-15):** the
+      `comments-secondary` cell now has a per-adapter regression fixture —
+      "selector drift → secondary fallback (L1)" — in all four adapter suites
+      (`youtubeAdapter.test.ts`, `instagramAdapter.test.ts`,
+      `facebookAdapter.test.ts`, `tiktokAdapter.test.ts`). Each fixture is
+      selector-faithful: the drifted primary set matches nothing, the
+      documented secondary set matches the fixture container, and the parsed
+      comment (text/author/id/elementRef) plus the throttled drift warning are
+      asserted. No selector changes were required — the secondary paths were
+      verified healthy against these fixtures.
 - [x] **Test-coverage audit (2026-09-11):** every GA cell has a passing unit
       test in the repo. `docs/PLATFORM_VERIFICATION.md` now carries a `test`
       column mapping each cell to its coverage suite (473/473 tests passing).
