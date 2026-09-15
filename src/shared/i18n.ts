@@ -85,6 +85,17 @@ export const en = {
     'Optionally review your own comment drafts for harmful language before you post them.',
   'settings.reviewDrafts': 'Review my own comment drafts',
   'settings.reviewDraftsAria': 'Review own comment drafts',
+  // Test-comment playground: try the rainbow button on any text in settings.
+  'settings.section.tryIt': 'Try it out',
+  'settings.tryIt.desc':
+    'Type any comment below to preview exactly what you would see on social media: the comment with its rainbow button and full analysis.',
+  'settings.tryIt.label': 'Type a comment to preview',
+  'settings.tryIt.placeholder': 'Type a comment to test NoH8…',
+  'settings.tryIt.author': 'You',
+  'settings.tryIt.empty': 'Your preview comment will appear here.',
+  'settings.tryIt.analyzing': 'Analyzing…',
+  'settings.tryIt.flagged': 'Flagged — click the rainbow button for details.',
+  'settings.tryIt.clean': 'Not flagged — click the rainbow button for details.',
   // M19 — settings filter-as-you-type search (pure client-side, no network).
   'settings.search.label': 'Search settings',
   'settings.search.placeholder': 'Filter settings… (press / to focus)',

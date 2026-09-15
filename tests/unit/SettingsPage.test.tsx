@@ -50,6 +50,12 @@ vi.mock('../../src/settings/ModelManager', () => ({
   default: () => <div data-testid="model-manager">Model Manager Section</div>,
 }));
 
+// Lightweight stub for the playground: unit-tested in TestCommentPreview.test.tsx.
+// Keeps this suite focused on page wiring without pulling the inference UI.
+vi.mock('../../src/settings/TestCommentPreview', () => ({
+  default: () => <div data-testid="test-comment-preview">Preview stub</div>,
+}));
+
 // Load the component AFTER the mocks are registered.
 const { default: SettingsPage } = await import('../../src/settings/SettingsPage');
 
@@ -209,6 +215,24 @@ describe('SettingsPage', () => {
     await user.keyboard('{Escape}');
     expect(search).toHaveValue('');
     expect(screen.getByTestId('platforms-section')).toBeInTheDocument();
+  });
+
+  test('renders the try-it-out playground section', () => {
+    render(<SettingsPage />);
+    expect(screen.getByTestId('tryit-section')).toBeInTheDocument();
+    expect(screen.getByTestId('test-comment-preview')).toBeInTheDocument();
+  });
+
+  test('search filters the try-it-out section as you type', async () => {
+    const user = userEvent.setup();
+    render(<SettingsPage />);
+    const search = screen.getByRole('searchbox', { name: /search settings/i });
+    await user.type(search, 'drafts');
+    expect(screen.queryByTestId('tryit-section')).not.toBeInTheDocument();
+    await user.clear(search);
+    await user.type(search, 'try it');
+    expect(screen.getByTestId('tryit-section')).toBeInTheDocument();
+    expect(screen.queryByTestId('platforms-section')).not.toBeInTheDocument();
   });
 });
 

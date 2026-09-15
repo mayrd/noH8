@@ -3,6 +3,7 @@ import { useSettingsStore } from '../settings/settingsStore';
 import { getMatchesForPlatform } from '../content/platformConfig';
 import ModelManager from './ModelManager';
 import SettingsGuide from './SettingsGuide';
+import TestCommentPreview from './TestCommentPreview';
 import { PLATFORM_META } from './platformMeta';
 import { resetLearnedCalibration } from '../offscreen/calibration';
 import { t } from '../shared/i18n';
@@ -90,6 +91,12 @@ const SettingsPage: React.FC = () => {
         keywords: 'youtube instagram facebook tiktok scanning origins platforms',
       },
       {
+        id: 'tryIt',
+        title: t('settings.section.tryIt'),
+        description: t('settings.tryIt.desc'),
+        keywords: 'try test preview rainbow button comment input',
+      },
+      {
         id: 'handling',
         title: t('settings.section.handling'),
         description: t('settings.handling.desc'),
@@ -112,6 +119,7 @@ const SettingsPage: React.FC = () => {
   const showGuide = visibleSections.some((s) => s.id === 'guide');
   const showPlatforms = visibleSections.some((s) => s.id === 'platforms');
   const showHandling = visibleSections.some((s) => s.id === 'handling');
+  const showTryIt = visibleSections.some((s) => s.id === 'tryIt');
   const showModels = visibleSections.some((s) => s.id === 'models');
 
   return (
@@ -253,6 +261,17 @@ const SettingsPage: React.FC = () => {
           {showModels && (
           <section data-testid="models-section">
             <ModelManager />
+          </section>
+          )}
+
+          {/* Try-it-out playground: test comment + real rainbow button */}
+          {showTryIt && (
+          <section data-testid="tryit-section">
+            <h2 className="text-lg font-semibold text-gray-800 mb-1">{t('settings.section.tryIt')}</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              {t('settings.tryIt.desc')}
+            </p>
+            <TestCommentPreview />
           </section>
           )}
         </div>

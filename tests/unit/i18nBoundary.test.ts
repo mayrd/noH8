@@ -52,6 +52,7 @@ describe('i18n boundary', () => {
       'settings/SettingsPopup.tsx',
       'settings/SettingsGuide.tsx',
       'settings/ModelManager.tsx',
+      'settings/TestCommentPreview.tsx',
     ];
     for (const file of surfaces) {
       expect(/shared\/i18n/.test(read(file)), `${file} should import shared/i18n`).toBe(
