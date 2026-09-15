@@ -39,6 +39,7 @@ describe('ModelStore', () => {
       downloadedModels: [],
       modelStatus: {},
       downloadProgress: {},
+      downloadDetails: {},
     });
     localGet.mockImplementation(
       (key, cb) => cb({ [STORAGE_KEY]: { selectedModelId: DEFAULT_MODEL_ID } })
@@ -63,6 +64,7 @@ describe('ModelStore', () => {
           downloadedModels: [],
           modelStatus: {},
           downloadProgress: {},
+          downloadDetails: {},
         },
       },
       expect.any(Function)
@@ -81,6 +83,7 @@ describe('ModelStore', () => {
           downloadedModels: [],
           modelStatus: {},
           downloadProgress: { 'toxic-bert': 64 },
+          downloadDetails: {},
         },
       },
       expect.any(Function)
@@ -104,18 +107,33 @@ describe('ModelStore', () => {
   });
 
 
-  test('marking a model downloaded records and persists it', () => {
+  test('marking a model downloaded records, persists it and flips status to ready', () => {
     const state = modelStore.getState();
     state.markModelDownloaded('toxic-bert');
     expect(modelStore.getState().downloadedModels).toContain('toxic-bert');
+    expect(modelStore.getState().modelStatus['toxic-bert']).toBe('ready');
     expect(localSet).toHaveBeenCalled();
   });
 
-  test('unmarking a downloaded model removes it from storage', () => {
+  test('unmarking a downloaded model removes it from storage and resets status', () => {
     const state = modelStore.getState();
     state.markModelDownloaded('toxic-bert');
     state.unmarkModelDownloaded('toxic-bert');
     expect(modelStore.getState().downloadedModels).not.toContain('toxic-bert');
+    expect(modelStore.getState().modelStatus['toxic-bert']).toBe('not_downloaded');
+    expect(modelStore.getState().downloadDetails['toxic-bert']).toBeUndefined();
+  });
+
+  test('recording byte-level download detail syncs the legacy percent map', () => {
+    modelStore.getState().setDownloadDetail('toxic-bert', {
+      loadedBytes: 33790598,
+      totalBytes: 67581197,
+      percent: 50,
+      file: 'onnx/model_quantized.onnx',
+    });
+    expect(modelStore.getState().downloadDetails['toxic-bert']?.loadedBytes).toBe(33790598);
+    expect(modelStore.getState().downloadDetails['toxic-bert']?.totalBytes).toBe(67581197);
+    expect(modelStore.getState().downloadProgress['toxic-bert']).toBe(50);
   });
 
   test('keeps the model selection and status in sync from storage changes', async () => {
@@ -179,6 +197,7 @@ describe('ModelStore', () => {
           downloadedModels: [],
           modelStatus: {},
           downloadProgress: {},
+          downloadDetails: {},
         },
       },
       expect.any(Function)

@@ -12,6 +12,7 @@ import {
 } from '../content/analysis/threadContext';
 import { mergeConsensus, resolveConsensusModelId } from '../content/analysis/consensus';
 import { modelStore } from '../settings/modelStore';
+import { createProgressReporter, type TransformersProgressEvent } from './downloadProgress';
 import { MSG } from '../shared/messages';
 import { recordInferenceHealth } from '../shared/inferenceHealth';
 import { loadTransformers } from './transformersLoader';
@@ -31,7 +32,7 @@ import { calibrateAnalysis } from './calibration';
 
 /**
  * Download (and prime) a model. Updates the shared model status in storage so
- * the settings UI can reflect progress, streams per-file percentage progress
+ * the settings UI can reflect progress, streams per-file byte-level progress
  * back through the store, and logs progress to the console for diagnostics.
  */
 export async function downloadModel(modelId: string): Promise<void> {
@@ -40,10 +41,22 @@ export async function downloadModel(modelId: string): Promise<void> {
 
   console.info(`[NoH8] Downloading model "${modelId}" (${descriptor.modelId})…`);
   modelStore.getState().setModelStatus(modelId, 'downloading');
-  modelStore.getState().setDownloadProgress(modelId, 0);
+  // Seed the byte-level detail from the catalog size so the UI can render
+  // "0 MB of X MB" immediately, before the first progress event arrives.
+  modelStore.getState().setDownloadDetail(modelId, {
+    loadedBytes: 0,
+    totalBytes: descriptor.sizeBytes,
+    percent: 0,
+    file: 'onnx/model_quantized.onnx',
+  });
   try {
-    await getPipeline(descriptor, createProgressReporter(modelId));
-    modelStore.getState().setDownloadProgress(modelId, 100);
+    await getPipeline(descriptor, createProgressReporter(modelId, descriptor.sizeBytes));
+    modelStore.getState().setDownloadDetail(modelId, {
+      loadedBytes: descriptor.sizeBytes,
+      totalBytes: descriptor.sizeBytes,
+      percent: 100,
+      file: 'onnx/model_quantized.onnx',
+    });
     modelStore.getState().markModelDownloaded(modelId);
     modelStore.getState().setModelStatus(modelId, 'ready');
     console.info(`[NoH8] Model "${modelId}" downloaded and ready.`);
@@ -52,26 +65,6 @@ export async function downloadModel(modelId: string): Promise<void> {
     console.error(`[NoH8] Failed to download model "${modelId}":`, error);
     throw error;
   }
-}
-
-/**
- * Build a Transformers.js `progress_callback` that forwards throttled whole-percent
- * download progress to the shared model store (in turns persisted to
- * `chrome.storage.local`, so the settings UI updates live) and to the console.
- * Non-progress lifecycle events (initiate / download / done) are ignored.
- */
-function createProgressReporter(
-  modelId: string
-): (event: { status?: string; progress?: number }) => void {
-  let lastPercent = -1;
-  return (event) => {
-    if (event.status !== 'progress' || typeof event.progress !== 'number') return;
-    const percent = Math.max(0, Math.min(100, Math.round(event.progress)));
-    if (percent === lastPercent) return; // throttle storage writes to per-percent
-    lastPercent = percent;
-    console.debug(`[NoH8] Model "${modelId}" download progress: ${percent}%`);
-    modelStore.getState().setDownloadProgress(modelId, percent);
-  };
 }
 
 /** Best-effort removal of the model's files from the Cache Storage API. */
@@ -154,7 +147,7 @@ const PIPELINES = new Map<string, TextClassifier>();
 
 async function getPipeline(
   descriptor: ModelDescriptor,
-  onProgress?: (event: { status?: string; progress?: number }) => void
+  onProgress?: (event: TransformersProgressEvent) => void
 ): Promise<TextClassifier> {
   const existing = PIPELINES.get(descriptor.id);
   if (existing) return existing;

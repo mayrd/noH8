@@ -29,6 +29,25 @@ export interface ModelStorageState {
   modelStatus: Record<string, ModelStatusId>;
   /** Per-model download progress as a percentage (0–100), shown in the settings UI. */
   downloadProgress: Record<string, number>;
+  /**
+   * Per-model byte-level download detail (loaded/total bytes + percent +
+   * current file), so the settings UI can render progress "on the file size"
+   * (e.g. `32.2 MB of 64.5 MB · 50%`). Persisted alongside the legacy
+   * percentage map so settings ↔ offscreen stay in sync live.
+   */
+  downloadDetails: Record<string, DownloadDetail>;
+}
+
+/** Byte-level download detail for one model. */
+export interface DownloadDetail {
+  /** Bytes downloaded so far across the model's files. */
+  loadedBytes: number;
+  /** Total bytes across the model's files (0 while unknown). */
+  totalBytes: number;
+  /** Aggregate percent 0–100 derived from loaded/total. */
+  percent: number;
+  /** Name of the file currently streaming (e.g. `onnx/model_quantized.onnx`). */
+  file?: string;
 }
 
 export interface ModelStore extends ModelStorageState {
@@ -46,6 +65,12 @@ export interface ModelStore extends ModelStorageState {
   setModelStatus: (id: string, status: ModelStatusId) => void;
   setDownloadProgress: (id: string, percent: number) => void;
   /**
+   * Record byte-level download detail for a model (loaded/total + percent +
+   * current file). Keeps the legacy `downloadProgress` percent map in sync so
+   * existing UI/tests keep working.
+   */
+  setDownloadDetail: (id: string, detail: DownloadDetail) => void;
+  /**
    * (M16) Record/clear the classified failure kind for a model. Transient,
    * in-memory UI state only — never persisted (the persisted `error` status
    * alone is enough to re-derive that a retry is possible after a reload).
@@ -60,6 +85,7 @@ export const DEFAULT_MODEL_STORAGE: ModelStorageState = {
   downloadedModels: [],
   modelStatus: {},
   downloadProgress: {},
+  downloadDetails: {},
 };
 
 function readStorage(): Promise<ModelStorageState | undefined> {
@@ -83,6 +109,7 @@ function writeStorage(next: ModelStore): void {
     downloadedModels: next.downloadedModels,
     modelStatus: next.modelStatus,
     downloadProgress: next.downloadProgress,
+    downloadDetails: next.downloadDetails,
   };
   chrome.storage.local.set({ [STORAGE_KEY]: snapshot }, () => {});
 }
@@ -107,6 +134,10 @@ export const createModelStore = () =>
         if (!get().downloadedModels.includes(id)) {
           set({ downloadedModels: [...get().downloadedModels, id] });
         }
+        // Marking downloaded implies ready: the settings badge derives
+        // "Not downloaded" vs "Ready on device" from this status, so keep the
+        // two in sync even if a caller only recorded the download list.
+        set({ modelStatus: { ...get().modelStatus, [id]: 'ready' } });
         // (M16) A successful download clears any recorded failure.
         const { [id]: _cleared, ...remainingFailures } = get().modelFailures;
         set({ modelFailures: remainingFailures });
@@ -116,6 +147,9 @@ export const createModelStore = () =>
         set({
           downloadedModels: get().downloadedModels.filter((m) => m !== id),
         });
+        set({ modelStatus: { ...get().modelStatus, [id]: 'not_downloaded' } });
+        const { [id]: _clearedDetail, ...remainingDetails } = get().downloadDetails;
+        set({ downloadDetails: remainingDetails });
         writeStorage(get());
       },
       setModelStatus: (id, status) => {
@@ -124,6 +158,17 @@ export const createModelStore = () =>
       },
       setDownloadProgress: (id, percent) => {
         set({ downloadProgress: { ...get().downloadProgress, [id]: percent } });
+        const prev = get().downloadDetails[id];
+        if (prev && prev.percent !== percent) {
+          set({
+            downloadDetails: { ...get().downloadDetails, [id]: { ...prev, percent } },
+          });
+        }
+        writeStorage(get());
+      },
+      setDownloadDetail: (id, detail) => {
+        set({ downloadDetails: { ...get().downloadDetails, [id]: detail } });
+        set({ downloadProgress: { ...get().downloadProgress, [id]: detail.percent } });
         writeStorage(get());
       },
       setModelFailure: (id, kind) => {
@@ -141,7 +186,7 @@ export const createModelStore = () =>
 export const modelStore = createModelStore();
 
 /** Reactive React hook bound to the model store (re-renders on state change). */
-export const useModelStore = () => useStore(modelStore);
+export const useModelStore = (): ModelStore => useStore(modelStore);
 
 /** Hydrate the store from storage once and keep it in sync across contexts. */
 export async function initModelStore(): Promise<void> {
@@ -154,6 +199,7 @@ export async function initModelStore(): Promise<void> {
       downloadedModels: persisted.downloadedModels ?? [],
       modelStatus: persisted.modelStatus ?? {},
       downloadProgress: persisted.downloadProgress ?? {},
+      downloadDetails: persisted.downloadDetails ?? {},
     });
   }
   if (typeof chrome !== 'undefined' && chrome.storage?.onChanged) {
@@ -170,6 +216,7 @@ export async function initModelStore(): Promise<void> {
         downloadedModels: next.downloadedModels ?? modelStore.getState().downloadedModels,
         modelStatus: next.modelStatus ?? modelStore.getState().modelStatus,
         downloadProgress: next.downloadProgress ?? modelStore.getState().downloadProgress,
+        downloadDetails: next.downloadDetails ?? modelStore.getState().downloadDetails,
       });
     });
   }

@@ -43,6 +43,31 @@ export interface ModelDescriptor {
    * Required when `mode === "star-rating"`.
    */
   starLabels?: string[];
+  /**
+   * Approximate download size in bytes of the quantized ONNX weight file
+   * actually fetched by Transformers.js (`onnx/model_quantized.onnx` via
+   * `Content-Length`). Shown per model in the settings UI so users know the
+   * one-time download cost before clicking Download. Measured 2026-09-15;
+   * tokenizer/config files (<2 MB) are excluded.
+   */
+  sizeBytes: number;
+}
+
+/**
+ * Render a byte count as a human-readable size (B / KB / MB / GB), e.g.
+ * `formatBytes(110720344)` → `"105.6 MB"`. Pure helper for the settings UI.
+ */
+export function formatBytes(bytes: number): string {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB'];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1024 && unit < units.length - 1) {
+    value /= 1024;
+    unit += 1;
+  }
+  const rounded = unit === 0 ? Math.round(value).toString() : value.toFixed(1);
+  return `${rounded} ${units[unit]}`;
 }
 
 export const MODEL_CATALOG: ModelDescriptor[] = [
@@ -62,6 +87,7 @@ export const MODEL_CATALOG: ModelDescriptor[] = [
       'insult',
       'identity_hate',
     ],
+    sizeBytes: 110720344,
   },
   {
     id: 'bert-multilingual',
@@ -76,6 +102,7 @@ export const MODEL_CATALOG: ModelDescriptor[] = [
     mode: 'star-rating',
     hateLabels: [],
     starLabels: ['1 star', '2 stars', '3 stars', '4 stars', '5 stars'],
+    sizeBytes: 168593695,
   },
   {
     id: 'sst-2-english',
@@ -88,6 +115,7 @@ export const MODEL_CATALOG: ModelDescriptor[] = [
     hateLabels: [],
     positiveLabel: 'positive',
     negativeLabel: 'negative',
+    sizeBytes: 67581197,
   },
   {
     id: 'twitter-roberta',
@@ -95,11 +123,12 @@ export const MODEL_CATALOG: ModelDescriptor[] = [
     description:
       'RoBERTa fine-tuned on recent Twitter posts for positive/neutral/negative sentiment.',
     task: 'text-classification',
-    modelId: 'Xenova/cardiffnlp/twitter-roberta-base-sentiment-latest',
+    modelId: 'Xenova/twitter-roberta-base-sentiment-latest',
     mode: 'polarity',
     hateLabels: [],
     positiveLabel: 'positive',
     negativeLabel: 'negative',
+    sizeBytes: 125905426,
   },
 ];
 /** The model selected out of the box. Fast, multilingual and hate-oriented. */

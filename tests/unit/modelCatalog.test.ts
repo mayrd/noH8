@@ -4,6 +4,7 @@ import {
   DEFAULT_MODEL_ID,
   findModelDescriptor,
   commentAnalysisFromOutputs,
+  formatBytes,
   HATE_SPEECH_THRESHOLD,
 } from '../../src/offscreen/modelCatalog';
 
@@ -28,6 +29,9 @@ describe('ModelCatalog', () => {
       expect(model.task).toBe('text-classification');
       expect(model.modelId).toMatch(/^[A-Za-z0-9._/-]+$/);
       expect(['toxicity', 'polarity', 'star-rating']).toContain(model.mode);
+      // Per-model file size shown in the settings UI before downloading.
+      expect(model.sizeBytes).toEqual(expect.any(Number));
+      expect(model.sizeBytes).toBeGreaterThan(0);
     }
     // ids are unique
     const ids = MODEL_CATALOG.map((m) => m.id);
@@ -43,6 +47,12 @@ describe('ModelCatalog', () => {
     const desc = findModelDescriptor('bert-multilingual')!;
     expect(desc.mode).toBe('star-rating');
     expect(desc.starLabels).toEqual(['1 star', '2 stars', '3 stars', '4 stars', '5 stars']);
+  });
+
+  test('formatBytes renders catalog sizes as human-readable MB values', () => {
+    expect(formatBytes(0)).toBe('0 B');
+    expect(formatBytes(110720344)).toBe('105.6 MB');
+    expect(formatBytes(67581197)).toBe('64.5 MB');
   });
 });
 

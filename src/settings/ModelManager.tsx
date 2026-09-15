@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useModelStore, type ModelStatusId } from './modelStore';
 import { MODEL_CATALOG, type ModelDescriptor } from '../offscreen/modelCatalog';
+import { ModelSizeLine, DownloadProgressBar } from './ModelDownloadProgress';
 import { requestModelCommand } from '../offscreen/client';
 import { classifyModelFailure, type ModelFailureKind } from './modelFailure';
 import { t } from '../shared/i18n';
@@ -26,8 +27,19 @@ function statusFor(
  * catalog of suitable Transformers.js models.
  */
 const ModelManager: React.FC = () => {
-  const { selectedModelId, secondaryModelId, downloadedModels, modelStatus, downloadProgress, setSelectedModel, setSecondaryModel } =
-    useModelStore();
+  const {
+    selectedModelId,
+    secondaryModelId,
+    downloadedModels,
+    modelStatus,
+    downloadProgress,
+    downloadDetails,
+    setSelectedModel,
+    setSecondaryModel,
+    setModelStatus,
+    markModelDownloaded,
+    setDownloadDetail,
+  } = useModelStore();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   /** (M16) Classified failure kind per model, shown with a retry affordance. */
@@ -52,9 +64,33 @@ const ModelManager: React.FC = () => {
     setBusyId(model.id);
     setActionError(null);
     setNotice(null);
+    // Optimistic status so the badge flips to "Downloading…" immediately,
+    // even when the offscreen pipeline's storage writes land a tick later.
+    const previousStatus = modelStatus[model.id];
+    const previouslyDownloaded = downloadedModels.includes(model.id);
+    if (action === 'download') {
+      setModelStatus(model.id, 'downloading');
+      setDownloadDetail(model.id, {
+        loadedBytes: 0,
+        totalBytes: model.sizeBytes,
+        percent: 0,
+        file: 'onnx/model_quantized.onnx',
+      });
+    }
     try {
       await requestModelCommand(action, model.id);
       if (action === 'download') {
+        // Flip "Not downloaded" -> downloaded even if the offscreen
+        // pipeline's `markModelDownloaded` storage write has not propagated
+        // to this settings context yet.
+        markModelDownloaded(model.id);
+        setModelStatus(model.id, 'ready');
+        setDownloadDetail(model.id, {
+          loadedBytes: model.sizeBytes,
+          totalBytes: model.sizeBytes,
+          percent: 100,
+          file: 'onnx/model_quantized.onnx',
+        });
         setFailureKinds((prev) => {
           const { [model.id]: _cleared, ...rest } = prev;
           return rest;
@@ -72,6 +108,13 @@ const ModelManager: React.FC = () => {
         error: String((error as Error)?.message ?? error),
       });
       if (action === 'download') {
+        // Roll back the optimistic "downloading" badge so the card returns
+        // to its pre-click state instead of sticking on "Downloading…".
+        if (previousStatus !== undefined) {
+          setModelStatus(model.id, previousStatus);
+        } else if (!previouslyDownloaded) {
+          setModelStatus(model.id, 'not_downloaded');
+        }
         const kind = classifyModelFailure(error);
         setFailureKinds((prev) => ({ ...prev, [model.id]: kind }));
       }
@@ -140,6 +183,11 @@ const ModelManager: React.FC = () => {
                     <span className="text-sm font-medium text-gray-800 block">{model.name}</span>
                     <span className="text-xs text-gray-500 block mt-0.5">{model.description}</span>
                     <span className="text-xs text-gray-400 block mt-0.5">{t('models.mode', { mode: model.mode })}</span>
+                    <ModelSizeLine
+                      modelId={model.id}
+                      sizeBytes={model.sizeBytes}
+                      downloaded={isDownloaded}
+                    />
                   </span>
                 </label>
 
@@ -152,21 +200,13 @@ const ModelManager: React.FC = () => {
                 </span>
               </div>
 
-              {/* Download progress */}
-              {status === 'downloading' && (
-                <div className="mt-4" data-testid={`progress-${model.id}`}>
-                  <div className="flex justify-between text-xs text-gray-500 mb-1">
-                    <span>{t('models.downloadingFromHub')}</span>
-                    <span>{downloadProgress[model.id] ?? 0}%</span>
-                  </div>
-                  <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-noh8-600 transition-all duration-200"
-                      style={{ width: `${downloadProgress[model.id] ?? 0}%` }}
-                      data-testid={`progress-bar-${model.id}`}
-                    />
-                  </div>
-                </div>
+              {/* Download progress on the file size */}
+              {(status === 'downloading' || isBusy) && (
+                <DownloadProgressBar
+                  modelId={model.id}
+                  detail={downloadDetails[model.id]}
+                  legacyPercent={downloadProgress[model.id]}
+                />
               )}
 
               {/* Success / error feedback for the last action */}
